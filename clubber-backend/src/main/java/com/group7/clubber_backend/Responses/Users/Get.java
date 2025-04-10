@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.group7.lib.types.User.User;
 
 @ResponseBody
-public record UserGetResponse(
+public record Get(
         String id,
         String username,
         String name,
@@ -18,7 +18,7 @@ public record UserGetResponse(
         String[] favoriteReviewIds,
         String[] favoriteOrganizationIds) {
 
-    public UserGetResponse(User user) {
+    public Get(User user) {
         this(
                 user.getId().toString(),
                 user.getUsername(),

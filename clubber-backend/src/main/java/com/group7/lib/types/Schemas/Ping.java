@@ -1,4 +1,4 @@
-package com.group7.clubber_backend.Responses;
+package com.group7.lib.types.Schemas;
 
 public record Ping(String string) {
     public Ping(String string) {

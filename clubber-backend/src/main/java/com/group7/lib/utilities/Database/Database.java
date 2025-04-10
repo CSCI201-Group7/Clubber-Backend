@@ -34,6 +34,8 @@ public class Database {
                 .version(ServerApiVersion.V1)
                 .build();
         MongoClientSettings settings = MongoClientSettings.builder()
+                .retryWrites(true)
+                .retryReads(true)
                 .applyConnectionString(new ConnectionString("mongodb+srv://backend_user:Tp2cJM6pSuesjmRF@clubber.tq7l5az.mongodb.net/?retryWrites=true&w=majority&appName=Clubber"))
                 .serverApi(serverApi)
                 .build();

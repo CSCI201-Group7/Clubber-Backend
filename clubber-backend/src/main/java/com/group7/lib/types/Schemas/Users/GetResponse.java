@@ -1,11 +1,11 @@
-package com.group7.clubber_backend.Responses.Users;
+package com.group7.lib.types.Schemas.Users;
 
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.group7.lib.types.User.User;
 
 @ResponseBody
-public record Get(
+public record GetResponse(
         String id,
         String username,
         String name,
@@ -18,7 +18,7 @@ public record Get(
         String[] favoriteReviewIds,
         String[] favoriteOrganizationIds) {
 
-    public Get(User user) {
+    public GetResponse(User user) {
         this(
                 user.getId().toString(),
                 user.getUsername(),

@@ -12,11 +12,11 @@ Connection/API request handlers. Grouped by users, organizations .etc. For examp
 
 **Naming:** `<Endpoint>Controller.java` -> `OrganizationController.java`
 
-#### Responses
+#### Schemas
 
-Response schema providers for Controllers, also classified with individual endpoint groups.
+In `lib/types/`. Holds schema for Http request/response for Controllers, also classified with individual endpoint groups.
 
-**Naming:** `<HTTPMethod>.java` -> `Responses/Users/Get.java`
+**Naming:** `<Group>/<HTTPMethod><Request/Response>.java` -> `Schemas/Users/GetResponse.java`
 
 ### Managers
 

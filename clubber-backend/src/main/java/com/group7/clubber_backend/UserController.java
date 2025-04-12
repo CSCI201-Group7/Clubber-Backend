@@ -18,6 +18,8 @@ import com.group7.lib.types.Schemas.Users.PostResponse;
 import com.group7.lib.types.Schemas.Users.PutRequest;
 import com.group7.lib.types.User.User;
 import com.group7.lib.types.User.Year;
+import java.util.Date;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -43,6 +45,9 @@ public class UserController {
             request.name(),
             request.email(),
             Year.valueOf(request.year()),
+            request.major(),
+            new Date(), // registration date
+            new Date(), // last login
             new com.group7.lib.types.Ids.ReviewId[0],
             new com.group7.lib.types.Ids.CommentId[0],
             new com.group7.lib.types.Ids.OrganizationId[0],
@@ -63,6 +68,7 @@ public class UserController {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setYear(Year.valueOf(request.year()));
+        user.setMajor(request.major());
         this.userManager.update(user);
         return new GetResponse(user);
     }
@@ -75,5 +81,30 @@ public class UserController {
         } catch (Exception e) {
             return new DeleteResponse(false, "Failed to delete user: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/{id}/reviews")
+    public List<com.group7.lib.types.Review.Review> getUserReviews(@PathVariable String id) {
+        return this.userManager.getUserReviews(new UserId(id));
+    }
+
+    @GetMapping("/{id}/comments")
+    public List<com.group7.lib.types.Comment.Comment> getUserComments(@PathVariable String id) {
+        return this.userManager.getUserComments(new UserId(id));
+    }
+
+    @GetMapping("/{id}/favorites")
+    public List<com.group7.lib.types.Organization.Organization> getUserFavorites(@PathVariable String id) {
+        return this.userManager.getUserFavorites(new UserId(id));
+    }
+
+    @PostMapping("/{id}/interests")
+    public void addUserInterests(@PathVariable String id, @RequestBody List<String> interests) {
+        this.userManager.addUserInterests(new UserId(id), interests);
+    }
+
+    @GetMapping("/{id}/recommendations")
+    public List<com.group7.lib.types.Organization.Organization> getUserRecommendations(@PathVariable String id) {
+        return this.userManager.getUserRecommendations(new UserId(id));
     }
 }

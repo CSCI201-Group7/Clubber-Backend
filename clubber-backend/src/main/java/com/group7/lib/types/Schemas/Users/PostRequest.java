@@ -4,5 +4,6 @@ public record PostRequest(
     String username,
     String name,
     String email,
-    String year
+    String year,
+    String major
 ) {}

@@ -35,11 +35,12 @@ public record GetResponse(
     }
 
     private static String[] convertToStringArray(Object[] ids) {
-        if (ids == null) {
+        if(ids == null){
             return new String[0];
         }
         String[] result = new String[ids.length];
-        for (int i = 0; i < ids.length; i++) {
+
+        for(int i = 0; i < ids.length; i++){
             result[i] = ids[i].toString();
         }
         return result;

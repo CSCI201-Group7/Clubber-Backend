@@ -32,7 +32,7 @@ public class UserController {
 
     @PostMapping("/")
     public PostResponse createUser(@RequestBody PostRequest request) {
-//        User user = this.userManager.create(request);
-//        return new PostResponse(user);
+        // User user = this.userManager.create(request);
+        // return new PostResponse(user);
     }
 }

@@ -1,0 +1,9 @@
+package com.group7.lib.types.Ids;
+
+import com.group7.lib.types.Ids.base.Id;
+
+public class EventId extends Id {
+    public EventId(String value) {
+        super(value);
+    }
+} 

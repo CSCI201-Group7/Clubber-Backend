@@ -1,4 +1,4 @@
-package com.group7.lib.types.Schemas.Organizations;
+package com.group7.lib.types.Organization;
 
 import java.util.Date;
 

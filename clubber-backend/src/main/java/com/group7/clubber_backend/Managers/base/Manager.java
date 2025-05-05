@@ -16,6 +16,6 @@ public abstract class Manager<T> {
 
     public abstract List<T> getAll();
 
-    public abstract void list(Id[] ids);
+    public abstract List<T> list(Id[] ids);
 
 }

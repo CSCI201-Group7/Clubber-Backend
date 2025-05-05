@@ -7,10 +7,7 @@ public record PostResponse(
     String username,
     String name,
     String email,
-    String year,
-    String major,
-    Date registrationDate,
-    Date lastLogin
+    String year
 ) {
     public PostResponse(User user) {
         this(
@@ -18,10 +15,7 @@ public record PostResponse(
             user.getUsername(),
             user.getName(),
             user.getEmail(),
-            user.getYear().toString(),
-            user.getMajor(),
-            user.getRegistrationDate(),
-            user.getLastLogin()
+            user.getYear().getDisplayName()
         );
     }
 }

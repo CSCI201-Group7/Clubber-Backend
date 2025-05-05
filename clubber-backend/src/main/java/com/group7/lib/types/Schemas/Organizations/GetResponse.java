@@ -1,23 +1,23 @@
 package com.group7.lib.types.Schemas.Organizations;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.ResponseBody;
+
 import com.group7.lib.types.Organization.Organization;
-import java.util.Date;
+import com.group7.lib.types.Organization.OrganizationInfo;
 
 @ResponseBody
 public record GetResponse(
     String id,
     String name,
-    String category,
-    String[] tags,
+    String type,
     String[] memberIds,
     String[] adminIds,
-    double rating,
     String[] reviewIds,
-    RecruitmentInfo recruitmentInfo,
     OrganizationInfo info,
-    Event[] events,
-    Announcement[] announcements,
+    String[] eventIds,
+    String[] announcementIds,
     String logoId,
     String bannerId,
     String visibility
@@ -26,44 +26,27 @@ public record GetResponse(
         this(
             organization.getId().toString(),
             organization.getName(),
-            organization.getCategory().toString(),
-            organization.getTags(),
+            organization.getType().toString(),
             convertToStringArray(organization.getMemberIds()),
             convertToStringArray(organization.getAdminIds()),
-            organization.getRating(),
             convertToStringArray(organization.getReviewIds()),
-            new RecruitmentInfo(
-                organization.getRecruitmentInfo().isOpenStatus(),
-                organization.getRecruitmentInfo().getApplicationLink(),
-                organization.getRecruitmentInfo().getDeadline(),
-                organization.getRecruitmentInfo().getGradeRequirements(),
-                organization.getRecruitmentInfo().getMajorRequirements()
-            ),
-            new OrganizationInfo(
-                organization.getInfo().getNumberOfMembers(),
-                organization.getInfo().getYearOfEstablishment(),
-                organization.getInfo().getDescription(),
-                organization.getInfo().getMeetingSchedule(),
-                organization.getInfo().getLocation(),
-                organization.getInfo().getContactEmail(),
-                organization.getInfo().getSocialMediaLinks()
-            ),
-            organization.getEvents(),
-            organization.getAnnouncements(),
-            organization.getLogoId().toString(),
-            organization.getBannerId().toString(),
-            organization.getVisibility().toString()
+            organization.getInfo(),
+            convertToStringArray(organization.getEventIds()),
+            convertToStringArray(organization.getAnnouncementIds()),
+            organization.getProfileImageId(),
+            organization.getBannerImageId(),
+            "VISIBLE"
         );
     }
 
-    private static String[] convertToStringArray(Object[] ids) {
-        if(ids == null){
+    private static String[] convertToStringArray(List<?> ids) {
+        if (ids == null) {
             return new String[0];
         }
-        String[] result = new String[ids.length];
+        String[] result = new String[ids.size()];
 
-        for(int i = 0; i < ids.length; i++){
-            result[i] = ids[i].toString();
+        for (int i = 0; i < ids.size(); i++) {
+            result[i] = ids.get(i).toString();
         }
         return result;
     }

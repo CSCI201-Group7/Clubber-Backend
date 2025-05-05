@@ -17,7 +17,7 @@ public class TestCredentialProcessor {
         // or that the directory already exists from a previous run.
         // For a real test environment, consider using Spring Boot test context
         // or providing a specific configuration for the path.
-        CredentialProcessor credentialProcessor = new CredentialProcessor();
+        CredentialProcessor instance = CredentialProcessor.getInstance();
 
         // --- Test Data ---
         String originalData = "This is a secret message!";
@@ -29,7 +29,7 @@ public class TestCredentialProcessor {
         // --- Encryption ---
         String encryptedData = null;
         try {
-            encryptedData = credentialProcessor.encrypt(originalData);
+            encryptedData = instance.encrypt(originalData);
             System.out.println("Encrypted Data: " + encryptedData);
             if (encryptedData == null || encryptedData.isEmpty()) {
                 System.err.println("Encryption failed to produce output.");
@@ -43,7 +43,7 @@ public class TestCredentialProcessor {
 
 
         // --- Decryption ---
-        String decryptedData = credentialProcessor.decrypt(encryptedData);
+        String decryptedData = instance.decrypt(encryptedData);
         System.out.println("Decrypted Data: " + decryptedData);
 
         // --- Verification ---
@@ -59,7 +59,7 @@ public class TestCredentialProcessor {
         // --- Token Creation ---
         String token = null;
         try {
-            token = credentialProcessor.createToken(userId);
+            token = instance.createToken(userId);
             System.out.println("Generated Token: " + token);
              if (token == null || token.isEmpty()) {
                 System.err.println("Token creation failed to produce output.");
@@ -73,7 +73,7 @@ public class TestCredentialProcessor {
 
 
         // --- Token Verification ---
-        JwtClaims claims = credentialProcessor.verifyToken(token);
+        JwtClaims claims = instance.verifyToken(token);
 
         if (claims != null) {
             System.out.println("Token Verified Successfully.");

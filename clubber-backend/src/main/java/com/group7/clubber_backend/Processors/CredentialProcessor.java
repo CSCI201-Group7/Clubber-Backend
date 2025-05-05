@@ -15,26 +15,29 @@ import org.jose4j.jwt.consumer.InvalidJwtException;
 import org.jose4j.jwt.consumer.JwtConsumer;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.jose4j.lang.JoseException;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
 
-@Component
 public class CredentialProcessor {
+
+    private static final CredentialProcessor instance = new CredentialProcessor();
+
+    public static CredentialProcessor getInstance() {
+        return instance;
+    }
 
     private final Logger logger;
     private final String symmetricEncryptionAlgorithm = "A128GCM";
     private final String asymmetricEncryptionAlgorithm = "RSA-OAEP";
+    private final String signingAlgorithm = "RS256";
 
-    @Value("${app.credentials.path:./config/credentials}")
-    private String credentialsPath;
+    private String credentialsPath = "./config/credentials";
 
     private RSAPublicKey publicKey;
     private RSAPrivateKey privateKey;
 
-    public CredentialProcessor() {
+    private CredentialProcessor() {
         this.logger = new Logger("Processors/Credential");
         try {
             File credentialsDir = new File(credentialsPath);
@@ -44,9 +47,8 @@ public class CredentialProcessor {
 
             File publicKeyFile = new File(credentialsDir, "public.pem");
             File privateKeyFile = new File(credentialsDir, "private.pem");
-            File symmetricKeyFile = new File(credentialsDir, "symmetric.key");
 
-            if (!publicKeyFile.exists() || !privateKeyFile.exists() || !symmetricKeyFile.exists()) {
+            if (!publicKeyFile.exists() || !privateKeyFile.exists()) {
                 //generate new keys
                 RsaJsonWebKey rsaJsonWebKey = RsaJwkGenerator.generateJwk(2048);
                 this.publicKey = rsaJsonWebKey.getRsaPublicKey();
@@ -122,7 +124,7 @@ public class CredentialProcessor {
             JsonWebSignature jws = new JsonWebSignature();
             jws.setPayload(claims.toJson());
             jws.setKey(privateKey);
-            jws.setAlgorithmHeaderValue(asymmetricEncryptionAlgorithm);
+            jws.setAlgorithmHeaderValue(signingAlgorithm);
 
             return jws.getCompactSerialization();
         } catch (JoseException e) {

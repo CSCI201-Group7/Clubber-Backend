@@ -83,7 +83,8 @@ public class CredentialProcessor {
     }
 
     public String getPublicKey() {
-        return new String(this.publicKey.getEncoded());
+        RsaJsonWebKey rsaJsonWebKey = new RsaJsonWebKey(publicKey);
+        return rsaJsonWebKey.toJson();
     }
 
     public String decrypt(String encryptedData) {

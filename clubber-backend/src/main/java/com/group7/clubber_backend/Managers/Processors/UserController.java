@@ -46,8 +46,8 @@ public class UserController {
             request.email(),
             Year.valueOf(request.year()),
             request.major(),
-            new Date(), // registration date
-            new Date(), // last login
+            new Date(),
+            new Date(),
             new com.group7.lib.types.Ids.ReviewId[0],
             new com.group7.lib.types.Ids.CommentId[0],
             new com.group7.lib.types.Ids.OrganizationId[0],
@@ -78,7 +78,8 @@ public class UserController {
         try {
             this.userManager.delete(new UserId(id));
             return new DeleteResponse(true, "User deleted successfully");
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             return new DeleteResponse(false, "Failed to delete user: " + e.getMessage());
         }
     }

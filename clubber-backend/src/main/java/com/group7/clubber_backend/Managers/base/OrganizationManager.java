@@ -20,7 +20,7 @@ public class OrganizationManager extends Manager<Organization> {
     private final Database database;
     private final Logger logger;
 
-    private OrganizationManager() {
+    private OrganizationManager(){
         super();
         this.database = Database.getInstance();
         this.logger = new Logger("OrganizationManager");

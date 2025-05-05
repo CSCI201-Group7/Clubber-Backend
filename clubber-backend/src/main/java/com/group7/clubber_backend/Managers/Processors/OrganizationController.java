@@ -45,10 +45,10 @@ public class OrganizationController {
             request.name(),
             Category.valueOf(request.category()),
             request.tags(),
-            new com.group7.lib.types.Ids.UserId[0], // memberIds
-            new com.group7.lib.types.Ids.UserId[0], // adminIds
-            0.0, // rating
-            new com.group7.lib.types.Ids.ReviewId[0], // reviewIds
+            new com.group7.lib.types.Ids.UserId[0],
+            new com.group7.lib.types.Ids.UserId[0],
+            0.0,
+            new com.group7.lib.types.Ids.ReviewId[0],
             new com.group7.lib.types.Organization.RecruitmentInfo(
                 request.recruitmentInfo().openStatus(),
                 request.recruitmentInfo().applicationLink(),
@@ -65,10 +65,10 @@ public class OrganizationController {
                 request.info().contactEmail(),
                 request.info().socialMediaLinks()
             ),
-            new com.group7.lib.types.Schemas.Organizations.Event[0], // events
-            new com.group7.lib.types.Schemas.Organizations.Announcement[0], // announcements
-            new com.group7.lib.types.Ids.ImageId(java.util.UUID.randomUUID().toString()), // logoId
-            new com.group7.lib.types.Ids.ImageId(java.util.UUID.randomUUID().toString()), // bannerId
+            new com.group7.lib.types.Schemas.Organizations.Event[0],
+            new com.group7.lib.types.Schemas.Organizations.Announcement[0],
+            new com.group7.lib.types.Ids.ImageId(java.util.UUID.randomUUID().toString()),
+            new com.group7.lib.types.Ids.ImageId(java.util.UUID.randomUUID().toString()),
             Visibility.valueOf(request.visibility())
         );
         this.organizationManager.create(organization);

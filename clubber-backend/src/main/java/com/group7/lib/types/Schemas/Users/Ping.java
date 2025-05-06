@@ -1,7 +1,0 @@
-package com.group7.lib.types.Schemas.Users;
-
-public record Ping(String string) {
-    public Ping(String string) {
-        this.string = string;
-    }
-}

@@ -2,7 +2,7 @@ package com.group7.clubber_backend.Processors;
 
 import java.util.Objects;
 
-import org.jose4j.jwt.JwtClaims;
+import com.group7.lib.types.Ids.UserId;
 
 /**
  * Simple command-line test program for CredentialProcessor.
@@ -41,7 +41,6 @@ public class TestCredentialProcessor {
             return; // Stop if encryption failed
         }
 
-
         // --- Decryption ---
         String decryptedData = instance.decrypt(encryptedData);
         System.out.println("Decrypted Data: " + decryptedData);
@@ -61,42 +60,30 @@ public class TestCredentialProcessor {
         try {
             token = instance.createToken(userId);
             System.out.println("Generated Token: " + token);
-             if (token == null || token.isEmpty()) {
+            if (token == null || token.isEmpty()) {
                 System.err.println("Token creation failed to produce output.");
                 return; // Stop if token creation failed
             }
         } catch (RuntimeException e) {
-             System.err.println("Token creation threw an exception: " + e.getMessage());
-             e.printStackTrace();
-             return; // Stop if token creation failed
+            System.err.println("Token creation threw an exception: " + e.getMessage());
+            e.printStackTrace();
+            return; // Stop if token creation failed
         }
 
-
         // --- Token Verification ---
-        JwtClaims claims = instance.verifyToken(token);
+        UserId extractedUserId = instance.verifyToken(token);
 
-        if (claims != null) {
-            System.out.println("Token Verified Successfully.");
-            try {
-                System.out.println("Claims Subject (User ID): " + claims.getSubject());
-                System.out.println("Claims Issuer: " + claims.getIssuer());
-                // Use getAudience().get(0) as getAudience returns List<String>
-                System.out.println("Claims Audience: " + (claims.getAudience().isEmpty() ? "N/A" : claims.getAudience().get(0)));
-
-                if (Objects.equals(userId, claims.getSubject())) {
-                     System.out.println("SUCCESS: Token subject matches original user ID.");
-                } else {
-                     System.err.println("FAILURE: Token subject ("+ claims.getSubject() +") does NOT match original user ID (" + userId +").");
-                }
-            } catch (org.jose4j.jwt.MalformedClaimException e) {
-                System.err.println("FAILURE: Error accessing claims in token: " + e.getMessage());
-                e.printStackTrace();
+        if (extractedUserId != null) {
+            System.out.println("SUCCESS: Token verified successfully.");
+            if (Objects.equals(extractedUserId.toString(), userId)) {
+                System.out.println("SUCCESS: Token subject matches original user ID.");
+            } else {
+                System.err.println("FAILURE: Token subject (" + extractedUserId.toString() + ") does NOT match original user ID (" + userId + ").");
             }
-
         } else {
             System.err.println("FAILURE: Token verification failed.");
         }
 
         System.out.println("\nCredentialProcessor Test Finished.");
     }
-} 
+}

@@ -1,22 +1,22 @@
 package com.group7.clubber_backend.Managers;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.group7.clubber_backend.Managers.base.Manager;
-import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Ids.OrganizationId;
+import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Organization.Organization;
+import com.group7.lib.utilities.Conversion.DocumentConverter;
 import com.group7.lib.utilities.Database.Database;
 import com.group7.lib.utilities.Database.DatabaseCollection;
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
-import com.group7.lib.utilities.Conversion.DocumentConverter;
 
 public class OrganizationManager extends Manager<Organization> {
 
@@ -36,10 +36,10 @@ public class OrganizationManager extends Manager<Organization> {
     }
 
     @Override
-    public void create(Organization org) {
+    public Id create(Organization org) {
         if (org == null) {
             logger.log("Attempted to create a null organization", LogLevel.WARNING);
-            return;
+            return null;
         }
         if (org.getId() != null) {
             logger.log("Organization object already has an ID (" + org.getId().toString() + ") before creation.", LogLevel.WARNING);
@@ -47,13 +47,15 @@ public class OrganizationManager extends Manager<Organization> {
         Document doc = DocumentConverter.organizationToDocument(org);
         if (doc == null) {
              logger.log("Failed to convert organization to document for creation.", LogLevel.ERROR);
-             return;
+             return null;
          }
         String newId = database.insert(COLLECTION, doc);
         if (newId != null) {
              logger.log("Created organization with ID: " + newId, LogLevel.INFO);
+             return new OrganizationId(newId);
         } else {
             logger.log("Failed to create organization: " + org.getName(), LogLevel.ERROR);
+            return null;
         }
     }
 
@@ -149,6 +151,43 @@ public class OrganizationManager extends Manager<Organization> {
 
         List<Document> docs = database.list(COLLECTION, query);
         logger.log("Retrieved " + docs.size() + " organizations from list query", LogLevel.DEBUG);
+        return docs.stream()
+                .map(DocumentConverter::documentToOrganization)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Organization> search(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            logger.log("Search query is null or empty.", LogLevel.WARNING);
+            return new ArrayList<>();
+        }
+
+        String[] parts = query.split(":", 2);
+        if (parts.length != 2) {
+            logger.log("Invalid search query format. Expected 'field:value', got: " + query, LogLevel.WARNING);
+            return new ArrayList<>();
+        }
+
+        String field = parts[0].trim();
+        String value = parts[1].trim();
+
+        if (field.isEmpty() || value.isEmpty()) {
+            logger.log("Search field or value is empty in query: " + query, LogLevel.WARNING);
+            return new ArrayList<>();
+        }
+
+        logger.log("Searching for organizations with " + field + " = " + value, LogLevel.INFO);
+
+        Document searchQuery = new Document(field, value);
+        List<Document> docs = database.list(COLLECTION, searchQuery);
+
+        if (docs == null || docs.isEmpty()) {
+            logger.log("No organizations found for query: " + query, LogLevel.INFO);
+            return new ArrayList<>();
+        }
+
         return docs.stream()
                 .map(DocumentConverter::documentToOrganization)
                 .filter(java.util.Objects::nonNull)

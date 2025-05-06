@@ -15,6 +15,9 @@ public class UtilitiesController {
         return "pong";
     }
 
+    /*
+     * Returns the RSA public key in JWK format
+     */
     @GetMapping("/public-key")
     public String publicKey() {
         return CredentialProcessor.getInstance().getPublicKey();

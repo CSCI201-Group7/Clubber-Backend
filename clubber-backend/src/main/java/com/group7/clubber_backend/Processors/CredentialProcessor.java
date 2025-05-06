@@ -11,11 +11,13 @@ import org.jose4j.jwk.RsaJsonWebKey;
 import org.jose4j.jwk.RsaJwkGenerator;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.MalformedClaimException;
 import org.jose4j.jwt.consumer.InvalidJwtException;
 import org.jose4j.jwt.consumer.JwtConsumer;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.jose4j.lang.JoseException;
 
+import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
 
@@ -134,7 +136,7 @@ public class CredentialProcessor {
         }
     }
 
-    public JwtClaims verifyToken(String jwt) {
+    public UserId verifyToken(String jwt) {
         try {
             JwtConsumer jwtConsumer = new JwtConsumerBuilder()
                     .setRequireSubject()
@@ -143,8 +145,12 @@ public class CredentialProcessor {
                     .setVerificationKey(publicKey)
                     .build();
 
-            return jwtConsumer.processToClaims(jwt);
+            JwtClaims claims = jwtConsumer.processToClaims(jwt);
+            return new UserId(claims.getSubject());
         } catch (InvalidJwtException e) {
+            this.logger.log("Token verification failed: " + e.getMessage(), LogLevel.ERROR);
+            return null;
+        } catch (MalformedClaimException e) {
             this.logger.log("Token verification failed: " + e.getMessage(), LogLevel.ERROR);
             return null;
         }

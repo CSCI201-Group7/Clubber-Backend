@@ -1,25 +1,26 @@
 package com.group7.lib.utilities.Conversion;
 
-import com.group7.lib.types.Ids.*;
-import com.group7.lib.types.Ids.base.Id;
-import com.group7.lib.types.User.Favorites;
-import com.group7.lib.types.User.User;
-import com.group7.lib.types.User.Year;
-import com.group7.lib.types.Organization.Organization;
-import com.group7.lib.types.Organization.OrganizationInfo;
-import com.group7.lib.types.Organization.OrganizationType;
-import com.group7.lib.utilities.Logger.LogLevel;
-import com.group7.lib.utilities.Logger.Logger; // Assuming logger might be needed later or passed
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.Objects;
-
+import com.group7.lib.types.Ids.CommentId;
+import com.group7.lib.types.Ids.OrganizationId;
+import com.group7.lib.types.Ids.ReviewId; // Assuming logger might be needed later or passed
+import com.group7.lib.types.Ids.UserId;
+import com.group7.lib.types.Ids.base.Id;
+import com.group7.lib.types.Organization.Organization;
+import com.group7.lib.types.Organization.OrganizationInfo;
+import com.group7.lib.types.Organization.OrganizationType;
+import com.group7.lib.types.User.User;
+import com.group7.lib.types.User.Year;
+import com.group7.lib.utilities.Logger.LogLevel;
+import com.group7.lib.utilities.Logger.Logger;
 
 public class DocumentConverter {
 
@@ -27,27 +28,30 @@ public class DocumentConverter {
     private static final Logger logger = new Logger("DocumentConverter");
 
     // --- Generic ID List Converters ---
-
     /**
-     * Converts an array of Id objects to a List of their String representations.
+     * Converts an array of Id objects to a List of their String
+     * representations.
      */
     public static <T extends Id> List<String> idArrayToStringList(T[] ids) {
-         if (ids == null) return new ArrayList<>();
+        if (ids == null) {
+            return new ArrayList<>();
+        }
         return Arrays.stream(ids)
-                     .map(Id::toString) // Assumes Id::toString returns the hex string
-                     .collect(Collectors.toList());
+                .map(Id::toString) // Assumes Id::toString returns the hex string
+                .collect(Collectors.toList());
     }
 
-     /**
+    /**
      * Converts a List of Id objects to a List of their String representations.
      */
     public static <T extends Id> List<String> idListToStringList(List<T> ids) {
-        if (ids == null) return new ArrayList<>();
+        if (ids == null) {
+            return new ArrayList<>();
+        }
         return ids.stream()
-                  .map(Id::toString) // Assumes Id::toString returns the hex string
-                  .collect(Collectors.toList());
+                .map(Id::toString) // Assumes Id::toString returns the hex string
+                .collect(Collectors.toList());
     }
-
 
     /**
      * Converts a List of String IDs back to an array of a specific Id subtype.
@@ -68,36 +72,37 @@ public class DocumentConverter {
      */
     public static <T extends Id> List<T> stringListToIdList(List<String> stringIds, Class<T> idClass) {
         if (stringIds == null) {
-           return new ArrayList<>();
+            return new ArrayList<>();
         }
-       return stringIds.stream()
-               .map(strId -> {
-                   try {
-                       // Use reflection to call the constructor that accepts a String
-                       java.lang.reflect.Constructor<T> constructor = idClass.getDeclaredConstructor(String.class);
-                       return constructor.newInstance(strId);
-                   } catch (NoSuchMethodException e) {
-                       logger.log("ID class " + idClass.getSimpleName() + " does not have a String constructor.", LogLevel.ERROR);
-                       return null;
-                   } catch (Exception e) {
-                       logger.log("Error converting string to ID ("+idClass.getSimpleName()+"): " + strId + ", Error: " + e.getMessage(), LogLevel.ERROR);
-                       return null;
-                   }
-               })
-               .filter(Objects::nonNull)
-               .collect(Collectors.toList());
+        return stringIds.stream()
+                .map(strId -> {
+                    try {
+                        // Use reflection to call the constructor that accepts a String
+                        java.lang.reflect.Constructor<T> constructor = idClass.getDeclaredConstructor(String.class);
+                        return constructor.newInstance(strId);
+                    } catch (NoSuchMethodException e) {
+                        logger.log("ID class " + idClass.getSimpleName() + " does not have a String constructor.", LogLevel.ERROR);
+                        return null;
+                    } catch (Exception e) {
+                        logger.log("Error converting string to ID (" + idClass.getSimpleName() + "): " + strId + ", Error: " + e.getMessage(), LogLevel.ERROR);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
-
     // --- User Conversion ---
-
     public static Document userToDocument(User user) {
-        if (user == null) return null;
+        if (user == null) {
+            return null;
+        }
         Document doc = new Document();
         // User ID is final, assuming it's set correctly before calling this
         // or handled by DB insertion (_id usually set by DB driver)
         // doc.put("_id", new ObjectId(user.getId().toString())); // Usually not needed here
         doc.put("username", user.getUsername());
+        doc.put("password", user.getPassword());
         doc.put("name", user.getName());
         doc.put("email", user.getEmail());
         doc.put("year", user.getYear() != null ? user.getYear().name() : null); // Store enum as string
@@ -105,7 +110,6 @@ public class DocumentConverter {
         doc.put("commentIds", idArrayToStringList(user.getCommentIds()));
         doc.put("organizationIds", idArrayToStringList(user.getOrganizationIds()));
         doc.put("contactIds", idArrayToStringList(user.getContactIds()));
-        doc.put("favorites", favoritesToDocument(user.getFavorites())); // Uses placeholder
 
         return doc;
     }
@@ -118,8 +122,8 @@ public class DocumentConverter {
         // Ensure _id exists and is an ObjectId before conversion
         ObjectId objectId = doc.getObjectId("_id");
         if (objectId == null) {
-             logger.log("Document is missing _id field.", LogLevel.ERROR);
-             return null;
+            logger.log("Document is missing _id field.", LogLevel.ERROR);
+            return null;
         }
         UserId userId = new UserId(objectId.toHexString()); // Convert ObjectId to String for constructor
 
@@ -127,6 +131,7 @@ public class DocumentConverter {
         String name = doc.getString("name");
         String email = doc.getString("email");
         String yearStr = doc.getString("year");
+        String password = doc.getString("password");
         Year year = (yearStr != null) ? Year.valueOf(yearStr) : null; // Convert string back to enum, handle null
 
         // Convert lists of strings back to Id arrays
@@ -135,27 +140,31 @@ public class DocumentConverter {
         OrganizationId[] organizationIds = stringListToIdArray(doc.getList("organizationIds", String.class, new ArrayList<>()), OrganizationId.class);
         UserId[] contactIds = stringListToIdArray(doc.getList("contactIds", String.class, new ArrayList<>()), UserId.class);
 
-        // Convert Document back to Favorites
-        Favorites favorites = documentToFavorites(doc.get("favorites", Document.class)); // Uses placeholder
-
         // Use the User constructor
         // Note: If Favorites is null due to placeholder, User constructor might fail if it requires non-null.
         try {
-             return new User(userId, username, name, email, year, reviewIds, commentIds, organizationIds, contactIds, favorites);
+            User user = new User(username, email, password);
+            user.setId(userId);
+            user.setReviewIds(reviewIds);
+            user.setCommentIds(commentIds);
+            user.setOrganizationIds(organizationIds);
+            user.setContactIds(contactIds);
+            user.setYear(year);
+            user.setName(name);
+            return user;
         } catch (NullPointerException e) {
-             logger.log("Error constructing User, possibly due to null Favorites placeholder: " + e.getMessage(), LogLevel.ERROR);
-             return null; // Or handle differently
+            logger.log("Error constructing User, possibly due to null Favorites placeholder: " + e.getMessage(), LogLevel.ERROR);
+            return null; // Or handle differently
         }
     }
 
     // --- Organization Conversion ---
-
-     public static Document organizationToDocument(Organization org) {
+    public static Document organizationToDocument(Organization org) {
         if (org == null) {
             return null;
         }
         Document doc = new Document();
-         // Let DB handle _id generation
+        // Let DB handle _id generation
         doc.put("name", org.getName());
         doc.put("type", org.getType() != null ? org.getType().name() : null);
         doc.put("info", organizationInfoToDocument(org.getInfo())); // Placeholder
@@ -177,10 +186,10 @@ public class DocumentConverter {
         }
 
         ObjectId objectId = doc.getObjectId("_id");
-         if (objectId == null) {
-             logger.log("Organization Document is missing _id field.", LogLevel.ERROR);
-             return null;
-         }
+        if (objectId == null) {
+            logger.log("Organization Document is missing _id field.", LogLevel.ERROR);
+            return null;
+        }
         OrganizationId orgId = new OrganizationId(objectId.toHexString());
 
         String name = doc.getString("name");
@@ -202,46 +211,21 @@ public class DocumentConverter {
 
         // Construct Organization object
         // Note: May fail if Info is null and constructor requires non-null
-         try {
+        try {
             return new Organization(orgId, name, type, info, memberIds, adminIds, reviewIds,
-                profileImageId, eventIds, announcementIds, bannerImageId);
-         } catch(NullPointerException e) {
-             logger.log("Error constructing Organization, possibly due to null Info placeholder: " + e.getMessage(), LogLevel.ERROR);
-             return null;
-         }
-    }
-
-
-    // --- Placeholder Conversions ---
-
-    // Placeholder for Favorites conversion - requires Favorites structure
-    public static Document favoritesToDocument(Favorites favorites) {
-        // TODO: Implement based on Favorites.java structure
-        if (favorites == null) return new Document(); // Return empty doc if null
-        logger.log("Favorites to Document conversion not fully implemented.", LogLevel.WARNING);
-        // Example: doc.put("likedEvents", idArrayToStringList(favorites.getLikedEventIds()));
-        return new Document("placeholder", "favorites data"); // Return placeholder doc
-    }
-
-    // Placeholder for Document to Favorites conversion - requires Favorites structure
-    public static Favorites documentToFavorites(Document favDoc) {
-        // TODO: Implement based on Favorites.java structure
-        if (favDoc == null || favDoc.isEmpty() || favDoc.containsKey("placeholder")) {
-             // If null, empty, or placeholder, return null (or default object if appropriate)
-             // Returning null might cause issues if User constructor requires non-null.
-             // Consider returning a default/empty Favorites object if User needs it.
-             // Example: return new Favorites(new EventId[0], new OrganizationId[0]);
-             logger.log("Document to Favorites conversion used placeholder logic.", LogLevel.DEBUG);
-             return null; // Adjust based on User constructor needs
+                    profileImageId, eventIds, announcementIds, bannerImageId);
+        } catch (NullPointerException e) {
+            logger.log("Error constructing Organization, possibly due to null Info placeholder: " + e.getMessage(), LogLevel.ERROR);
+            return null;
         }
-        logger.log("Document to Favorites conversion needs implementation.", LogLevel.WARNING);
-        return null; // Needs real implementation
     }
 
-     // Placeholder for OrganizationInfo conversion
+    // Placeholder for OrganizationInfo conversion
     public static Document organizationInfoToDocument(OrganizationInfo info) {
         // TODO: Implement based on OrganizationInfo structure
-        if (info == null) return new Document();
+        if (info == null) {
+            return new Document();
+        }
         logger.log("OrganizationInfo to Document conversion not fully implemented.", LogLevel.WARNING);
         return new Document("placeholder", "organization info data");
     }
@@ -249,7 +233,7 @@ public class DocumentConverter {
     // Placeholder for Document to OrganizationInfo conversion
     public static OrganizationInfo documentToOrganizationInfo(Document infoDoc) {
         // TODO: Implement based on OrganizationInfo structure
-         if (infoDoc == null || infoDoc.isEmpty() || infoDoc.containsKey("placeholder")) {
+        if (infoDoc == null || infoDoc.isEmpty() || infoDoc.containsKey("placeholder")) {
             logger.log("Document to OrganizationInfo conversion used placeholder logic.", LogLevel.DEBUG);
             return null; // Adjust if Org constructor needs non-null Info
         }
@@ -257,4 +241,4 @@ public class DocumentConverter {
         return null; // Needs real implementation
     }
 
-} 
+}

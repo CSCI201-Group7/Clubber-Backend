@@ -15,6 +15,7 @@ import com.group7.lib.types.Schemas.Users.DeleteRequest;
 import com.group7.lib.types.Schemas.Users.PostRequest;
 import com.group7.lib.types.Schemas.Users.PostResponse;
 import com.group7.lib.types.User.User;
+import com.group7.lib.utilities.Crypto.Crypto;
 
 @RestController
 @RequestMapping("/users")
@@ -57,7 +58,8 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
 
-        User user = new User(username, email, password);
+        String hashedPassword = Crypto.hash(password);
+        User user = new User(username, email, hashedPassword);
         UserId userId = (UserId) UserManager.getInstance().create(user);
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User registration failed");

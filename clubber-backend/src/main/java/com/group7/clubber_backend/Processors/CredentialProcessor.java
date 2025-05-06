@@ -2,9 +2,12 @@ package com.group7.clubber_backend.Processors;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.jwk.RsaJsonWebKey;
@@ -41,33 +44,44 @@ public class CredentialProcessor {
 
     private CredentialProcessor() {
         this.logger = new Logger("Processors/Credential");
-        try {
-            File credentialsDir = new File(credentialsPath);
-            if (!credentialsDir.exists()) {
-                credentialsDir.mkdirs();
-            }
+        File credentialsDir = new File(credentialsPath);
+        if (!credentialsDir.exists()) {
+            credentialsDir.mkdirs();
+        }
 
-            File publicKeyFile = new File(credentialsDir, "public.pem");
-            File privateKeyFile = new File(credentialsDir, "private.pem");
+        File publicKeyFile = new File(credentialsDir, "public.pem");
+        File privateKeyFile = new File(credentialsDir, "private.pem");
 
-            if (!publicKeyFile.exists() || !privateKeyFile.exists()) {
-                //generate new keys
+        if (!publicKeyFile.exists() || !privateKeyFile.exists()) {
+            //generate new keys
+            try {
                 RsaJsonWebKey rsaJsonWebKey = RsaJwkGenerator.generateJwk(2048);
                 this.publicKey = rsaJsonWebKey.getRsaPublicKey();
                 this.privateKey = rsaJsonWebKey.getRsaPrivateKey();
+            } catch (JoseException e) {
+                this.logger.log("Failed to generate keys: " + e.getMessage(), LogLevel.ERROR);
+                throw new RuntimeException("Failed to generate keys", e);
+            }
 
-                //save keys to files
-                try (FileOutputStream fos = new FileOutputStream(publicKeyFile)) {
-                    fos.write(publicKey.getEncoded());
-                }
+            //save keys to files
+            try (FileOutputStream fos = new FileOutputStream(publicKeyFile)) {
+                fos.write(publicKey.getEncoded());
+            } catch (IOException e) {
+                this.logger.log("Failed to save public key: " + e.getMessage(), LogLevel.ERROR);
+                throw new RuntimeException("Failed to save public key", e);
+            }
 
-                try (FileOutputStream fos = new FileOutputStream(privateKeyFile)) {
-                    fos.write(privateKey.getEncoded());
-                }
+            try (FileOutputStream fos = new FileOutputStream(privateKeyFile)) {
+                fos.write(privateKey.getEncoded());
+            } catch (IOException e) {
+                this.logger.log("Failed to save private key: " + e.getMessage(), LogLevel.ERROR);
+                throw new RuntimeException("Failed to save private key", e);
+            }
 
-                this.logger.log("New credentials generated and saved", LogLevel.INFO);
-            } else {
-                //load existing keys
+            this.logger.log("New credentials generated and saved", LogLevel.INFO);
+        } else {
+            //load existing keys
+            try {
                 this.publicKey = (RSAPublicKey) java.security.KeyFactory.getInstance("RSA")
                         .generatePublic(new java.security.spec.X509EncodedKeySpec(
                                 Files.readAllBytes(publicKeyFile.toPath())));
@@ -75,12 +89,15 @@ public class CredentialProcessor {
                 this.privateKey = (RSAPrivateKey) java.security.KeyFactory.getInstance("RSA")
                         .generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(
                                 Files.readAllBytes(privateKeyFile.toPath())));
-
-                this.logger.log("Existing credentials loaded", LogLevel.INFO);
+            } catch (NoSuchAlgorithmException | IOException e) {
+                this.logger.log("Failed to load keys: " + e.getMessage(), LogLevel.ERROR);
+                throw new RuntimeException("Failed to load keys", e);
+            } catch (InvalidKeySpecException e) {
+                this.logger.log("Failed to load private key: " + e.getMessage(), LogLevel.ERROR);
+                throw new RuntimeException("Failed to load private key", e);
             }
-        } catch (Exception e) {
-            this.logger.log("Failed to initialize keys: " + e.toString(), LogLevel.ERROR);
-            throw new RuntimeException("Failed to initialize keys", e);
+
+            this.logger.log("Existing credentials loaded", LogLevel.INFO);
         }
     }
 

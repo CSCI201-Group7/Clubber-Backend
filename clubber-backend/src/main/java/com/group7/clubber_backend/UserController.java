@@ -12,6 +12,7 @@ import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Schemas.Users.DeleteRequest;
+import com.group7.lib.types.Schemas.Users.LoginRequest;
 import com.group7.lib.types.Schemas.Users.PostRequest;
 import com.group7.lib.types.Schemas.Users.PostResponse;
 import com.group7.lib.types.User.User;
@@ -67,6 +68,27 @@ public class UserController {
         String token = CredentialProcessor.getInstance().createToken(userId.toString());
         return new PostResponse(token);
 
+    }
+
+    @PostMapping("/login")
+    public PostResponse login(@RequestBody LoginRequest request) {
+        String emailEncrypted = request.email();
+        String passwordEncrypted = request.password();
+
+        String email = CredentialProcessor.getInstance().decrypt(emailEncrypted);
+        String password = CredentialProcessor.getInstance().decrypt(passwordEncrypted);
+
+        User user = UserManager.getInstance().search("email:" + email).get(0);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email");
+        }
+
+        if (!Crypto.verify(password, user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
+        }
+
+        String token = CredentialProcessor.getInstance().createToken(user.getId().toString());
+        return new PostResponse(token);
     }
 
     @DeleteMapping

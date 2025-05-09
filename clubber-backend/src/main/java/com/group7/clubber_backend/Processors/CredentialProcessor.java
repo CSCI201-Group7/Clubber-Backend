@@ -140,6 +140,7 @@ public class CredentialProcessor {
             claims.setIssuer("clubber-server");
             claims.setAudience("clubber-client");
             claims.setExpirationTimeMinutesInTheFuture(60 * 24 * 7); // 1 week
+            claims.setClaim("userId", userId);
 
             JsonWebSignature jws = new JsonWebSignature();
             jws.setPayload(claims.toJson());
@@ -157,13 +158,14 @@ public class CredentialProcessor {
         try {
             JwtConsumer jwtConsumer = new JwtConsumerBuilder()
                     .setRequireSubject()
+                    .setRequireExpirationTime()
                     .setExpectedIssuer("clubber-server")
                     .setExpectedAudience("clubber-client")
                     .setVerificationKey(publicKey)
                     .build();
 
             JwtClaims claims = jwtConsumer.processToClaims(jwt);
-            return new UserId(claims.getSubject());
+            return new UserId(claims.getClaimValue("userId", String.class));
         } catch (InvalidJwtException e) {
             this.logger.log("Token verification failed: " + e.getMessage(), LogLevel.ERROR);
             return null;

@@ -2,8 +2,11 @@ package com.group7.clubber_backend;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,6 +15,7 @@ import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Schemas.Users.DeleteRequest;
+import com.group7.lib.types.Schemas.Users.GetResponse;
 import com.group7.lib.types.Schemas.Users.LoginRequest;
 import com.group7.lib.types.Schemas.Users.PostRequest;
 import com.group7.lib.types.Schemas.Users.PostResponse;
@@ -82,6 +86,7 @@ public class UserController {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email");
         }
+        System.out.println("User found: " + user.getId().toString());
 
         if (!Crypto.verify(password, user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
@@ -89,6 +94,28 @@ public class UserController {
 
         String token = CredentialProcessor.getInstance().createToken(user.getId().toString());
         return new PostResponse(token);
+    }
+
+    @GetMapping("/{id}")
+    public GetResponse getById(@PathVariable String id) {
+        User user = UserManager.getInstance().get(new UserId(id));
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        return new GetResponse(user);
+    }
+
+    @GetMapping
+    public GetResponse get(@RequestHeader("Authorization") String token) {
+        if (token == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No token provided");
+        }
+        UserId userId = CredentialProcessor.getInstance().verifyToken(token);
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
+        User user = UserManager.getInstance().get(userId);
+        return new GetResponse(user);
     }
 
     @DeleteMapping

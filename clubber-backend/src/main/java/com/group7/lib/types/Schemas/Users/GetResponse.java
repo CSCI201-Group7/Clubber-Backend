@@ -22,7 +22,7 @@ public record GetResponse(
                 user.getUsername(),
                 user.getName(),
                 user.getEmail(),
-                user.getYear().toString(),
+                user.getYear() != null ? user.getYear().toString() : null,
                 convertToStringArray(user.getReviewIds()),
                 convertToStringArray(user.getCommentIds()),
                 convertToStringArray(user.getOrganizationIds()),

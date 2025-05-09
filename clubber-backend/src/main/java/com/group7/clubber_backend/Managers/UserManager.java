@@ -101,6 +101,7 @@ public class UserManager extends Manager<User> {
             logger.log("User not found with ID: " + id.toString(), LogLevel.WARNING);
             return null;
         }
+        logger.log("User found: " + id.toString(), LogLevel.INFO);
         return DocumentConverter.documentToUser(doc);
     }
 

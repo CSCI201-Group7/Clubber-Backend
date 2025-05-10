@@ -41,8 +41,8 @@ public class OrganizationManager extends Manager<Organization> {
             logger.log("Attempted to create a null organization", LogLevel.WARNING);
             return null;
         }
-        if (org.getId() != null) {
-            logger.log("Organization object already has an ID (" + org.getId().toString() + ") before creation.", LogLevel.WARNING);
+        if (org.id() != null) {
+            logger.log("Organization object already has an ID (" + org.id().toString() + ") before creation.", LogLevel.WARNING);
         }
         Document doc = DocumentConverter.organizationToDocument(org);
         if (doc == null) {
@@ -54,14 +54,14 @@ public class OrganizationManager extends Manager<Organization> {
              logger.log("Created organization with ID: " + newId, LogLevel.INFO);
              return new OrganizationId(newId);
         } else {
-            logger.log("Failed to create organization: " + org.getName(), LogLevel.ERROR);
+            logger.log("Failed to create organization: " + org.name(), LogLevel.ERROR);
             return null;
         }
     }
 
     @Override
     public void update(Organization org) {
-        if (org == null || org.getId() == null) {
+        if (org == null || org.id() == null) {
             logger.log("Attempted to update an organization with null object or null ID", LogLevel.WARNING);
             return;
         }
@@ -72,11 +72,11 @@ public class OrganizationManager extends Manager<Organization> {
          }
         doc.remove("_id");
 
-        boolean success = database.update(COLLECTION, org.getId().toString(), doc);
+        boolean success = database.update(COLLECTION, org.id().toString(), doc);
         if (success) {
-            logger.log("Updated organization with ID: " + org.getId().toString(), LogLevel.INFO);
+            logger.log("Updated organization with ID: " + org.id().toString(), LogLevel.INFO);
         } else {
-            logger.log("Failed to update organization with ID: " + org.getId().toString() + ". It might not exist.", LogLevel.WARNING);
+            logger.log("Failed to update organization with ID: " + org.id().toString() + ". It might not exist.", LogLevel.WARNING);
         }
     }
 

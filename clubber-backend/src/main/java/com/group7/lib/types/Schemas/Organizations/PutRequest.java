@@ -1,13 +1,15 @@
 package com.group7.lib.types.Schemas.Organizations;
 
-import com.group7.lib.types.Organization.OrganizationInfo;
-import com.group7.lib.types.Organization.RecruitmentInfo;
+import com.group7.lib.types.Organization.OrganizationLinks;
+import com.group7.lib.types.Organization.OrganizationType;
+import com.group7.lib.types.Organization.RecruitingStatus;
 
 public record PutRequest(
     String name,
-    String category,
-    String[] tags,
-    RecruitmentInfo recruitmentInfo,
-    OrganizationInfo info,
-    String visibility
-) {} 
+    OrganizationType type,
+    String description,
+    String contactEmail,
+    RecruitingStatus recruitingStatus,
+    String location,
+    OrganizationLinks links
+) {}

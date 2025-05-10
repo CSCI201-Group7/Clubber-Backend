@@ -5,37 +5,45 @@ import java.util.List;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.group7.lib.types.Organization.Organization;
-import com.group7.lib.types.Organization.OrganizationInfo;
+import com.group7.lib.types.Organization.OrganizationLinks;
+import com.group7.lib.types.Organization.OrganizationType;
+import com.group7.lib.types.Organization.RecruitingStatus;
 
 @ResponseBody
 public record GetResponse(
     String id,
     String name,
-    String type,
+    OrganizationType type,
+    String description,
+    String contactEmail,
+    RecruitingStatus recruitingStatus,
+    String location,
+    OrganizationLinks links,
     String[] memberIds,
     String[] adminIds,
     String[] reviewIds,
-    OrganizationInfo info,
+    String profileImageId,
     String[] eventIds,
     String[] announcementIds,
-    String logoId,
-    String bannerId,
-    String visibility
+    String bannerImageId
 ) {
     public GetResponse(Organization organization) {
         this(
-            organization.getId().toString(),
-            organization.getName(),
-            organization.getType().toString(),
-            convertToStringArray(organization.getMemberIds()),
-            convertToStringArray(organization.getAdminIds()),
-            convertToStringArray(organization.getReviewIds()),
-            organization.getInfo(),
-            convertToStringArray(organization.getEventIds()),
-            convertToStringArray(organization.getAnnouncementIds()),
-            organization.getProfileImageId(),
-            organization.getBannerImageId(),
-            "VISIBLE"
+            organization.id().toString(),
+            organization.name(),
+            organization.type(),
+            organization.description(),
+            organization.contactEmail(),
+            organization.recruitingStatus(),
+            organization.location(),
+            organization.links(),
+            convertToStringArray(organization.memberIds()),
+            convertToStringArray(organization.adminIds()),
+            convertToStringArray(organization.reviewIds()),
+            organization.profileImageId(),
+            convertToStringArray(organization.eventIds()),
+            convertToStringArray(organization.announcementIds()),
+            organization.bannerImageId()
         );
     }
 
@@ -44,7 +52,6 @@ public record GetResponse(
             return new String[0];
         }
         String[] result = new String[ids.size()];
-
         for (int i = 0; i < ids.size(); i++) {
             result[i] = ids.get(i).toString();
         }

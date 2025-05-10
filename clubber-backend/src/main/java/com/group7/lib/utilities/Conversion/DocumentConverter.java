@@ -15,8 +15,9 @@ import com.group7.lib.types.Ids.ReviewId; // Assuming logger might be needed lat
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Organization.Organization;
-import com.group7.lib.types.Organization.OrganizationInfo;
+import com.group7.lib.types.Organization.OrganizationLinks;
 import com.group7.lib.types.Organization.OrganizationType;
+import com.group7.lib.types.Organization.RecruitingStatus;
 import com.group7.lib.types.User.User;
 import com.group7.lib.types.User.Year;
 import com.group7.lib.utilities.Logger.LogLevel;
@@ -165,18 +166,25 @@ public class DocumentConverter {
         }
         Document doc = new Document();
         // Let DB handle _id generation
-        doc.put("name", org.getName());
-        doc.put("type", org.getType() != null ? org.getType().name() : null);
-        doc.put("info", organizationInfoToDocument(org.getInfo())); // Placeholder
+        doc.put("name", org.name());
+        doc.put("type", org.type() != null ? org.type().name() : null);
+        doc.put("description", org.description());
+        doc.put("contactEmail", org.contactEmail());
+        doc.put("recruitingStatus", org.recruitingStatus() != null ? org.recruitingStatus().name() : null);
+        doc.put("location", org.location());
+        doc.put("links", organizationLinksToDocument(org.links()));
+        
         // Convert List<Id> to List<String>
-        doc.put("memberIds", idListToStringList(org.getMemberIds()));
-        doc.put("adminIds", idListToStringList(org.getAdminIds()));
-        doc.put("reviewIds", idListToStringList(org.getReviewIds()));
-        // Assuming these are already String IDs or handled elsewhere
-        doc.put("profileImageId", org.getProfileImageId());
-        doc.put("eventIds", org.getEventIds()); // Removed idListToStringList call, assuming getEventIds returns List<String>
-        doc.put("announcementIds", org.getAnnouncementIds()); // Assuming List<String>
-        doc.put("bannerImageId", org.getBannerImageId());
+        doc.put("memberIds", idListToStringList(org.memberIds()));
+        doc.put("adminIds", idListToStringList(org.adminIds()));
+        doc.put("reviewIds", idListToStringList(org.reviewIds()));
+        
+        // Image and event IDs
+        doc.put("profileImageId", org.profileImageId());
+        doc.put("eventIds", org.eventIds());
+        doc.put("announcementIds", org.announcementIds());
+        doc.put("bannerImageId", org.bannerImageId());
+        
         return doc;
     }
 
@@ -195,50 +203,67 @@ public class DocumentConverter {
         String name = doc.getString("name");
         String typeStr = doc.getString("type");
         OrganizationType type = typeStr != null ? OrganizationType.valueOf(typeStr) : null;
-
-        OrganizationInfo info = documentToOrganizationInfo(doc.get("info", Document.class)); // Placeholder
+        
+        String description = doc.getString("description");
+        String contactEmail = doc.getString("contactEmail");
+        String recruitingStatusStr = doc.getString("recruitingStatus");
+        RecruitingStatus recruitingStatus = recruitingStatusStr != null ? RecruitingStatus.valueOf(recruitingStatusStr) : null;
+        String location = doc.getString("location");
+        OrganizationLinks links = documentToOrganizationLinks(doc.get("links", Document.class));
 
         // Convert List<String> back to List<Id>
         List<UserId> memberIds = stringListToIdList(doc.getList("memberIds", String.class, new ArrayList<>()), UserId.class);
         List<UserId> adminIds = stringListToIdList(doc.getList("adminIds", String.class, new ArrayList<>()), UserId.class);
         List<ReviewId> reviewIds = stringListToIdList(doc.getList("reviewIds", String.class, new ArrayList<>()), ReviewId.class);
-        List<String> eventIds = doc.getList("eventIds", String.class, new ArrayList<>()); // Directly get list of strings
 
-        // Assuming these are stored as Strings
+        // Image and event IDs
         String profileImageId = doc.getString("profileImageId");
+        List<String> eventIds = doc.getList("eventIds", String.class, new ArrayList<>());
         List<String> announcementIds = doc.getList("announcementIds", String.class, new ArrayList<>());
         String bannerImageId = doc.getString("bannerImageId");
 
-        // Construct Organization object
-        // Note: May fail if Info is null and constructor requires non-null
-        try {
-            return new Organization(orgId, name, type, info, memberIds, adminIds, reviewIds,
-                    profileImageId, eventIds, announcementIds, bannerImageId);
-        } catch (NullPointerException e) {
-            logger.log("Error constructing Organization, possibly due to null Info placeholder: " + e.getMessage(), LogLevel.ERROR);
-            return null;
-        }
+        return new Organization(
+            orgId,
+            name,
+            type,
+            description,
+            contactEmail,
+            recruitingStatus,
+            location,
+            links,
+            memberIds,
+            adminIds,
+            reviewIds,
+            profileImageId,
+            eventIds,
+            announcementIds,
+            bannerImageId
+        );
     }
 
-    // Placeholder for OrganizationInfo conversion
-    public static Document organizationInfoToDocument(OrganizationInfo info) {
-        // TODO: Implement based on OrganizationInfo structure
-        if (info == null) {
+    // OrganizationLinks conversion methods
+    public static Document organizationLinksToDocument(OrganizationLinks links) {
+        if (links == null) {
             return new Document();
         }
-        logger.log("OrganizationInfo to Document conversion not fully implemented.", LogLevel.WARNING);
-        return new Document("placeholder", "organization info data");
+        Document doc = new Document();
+        doc.put("website", links.website());
+        doc.put("linkedIn", links.linkedIn());
+        doc.put("instagram", links.instagram());
+        doc.put("discord", links.discord());
+        return doc;
     }
 
-    // Placeholder for Document to OrganizationInfo conversion
-    public static OrganizationInfo documentToOrganizationInfo(Document infoDoc) {
-        // TODO: Implement based on OrganizationInfo structure
-        if (infoDoc == null || infoDoc.isEmpty() || infoDoc.containsKey("placeholder")) {
-            logger.log("Document to OrganizationInfo conversion used placeholder logic.", LogLevel.DEBUG);
-            return null; // Adjust if Org constructor needs non-null Info
+    public static OrganizationLinks documentToOrganizationLinks(Document doc) {
+        if (doc == null) {
+            return new OrganizationLinks(null, null, null, null);
         }
-        logger.log("Document to OrganizationInfo conversion needs implementation.", LogLevel.WARNING);
-        return null; // Needs real implementation
+        return new OrganizationLinks(
+            doc.getString("website"),
+            doc.getString("linkedIn"),
+            doc.getString("instagram"),
+            doc.getString("discord")
+        );
     }
 
 }

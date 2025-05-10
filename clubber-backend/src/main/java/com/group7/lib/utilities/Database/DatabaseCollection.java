@@ -9,6 +9,7 @@ public enum DatabaseCollection {
     REVIEW(DatabaseConfig.REVIEW_COLLECTION),
     COMMENT(DatabaseConfig.COMMENT_COLLECTION),
     TEST(DatabaseConfig.TEST_COLLECTION),
+    FILE(DatabaseConfig.FILE_COLLECTION),
     REPORT(DatabaseConfig.REPORT_COLLECTION);
 
     private final String collectionName;

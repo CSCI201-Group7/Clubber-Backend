@@ -173,18 +173,17 @@ public class DocumentConverter {
         doc.put("recruitingStatus", org.recruitingStatus() != null ? org.recruitingStatus().name() : null);
         doc.put("location", org.location());
         doc.put("links", organizationLinksToDocument(org.links()));
-        
+
         // Convert List<Id> to List<String>
         doc.put("memberIds", idListToStringList(org.memberIds()));
         doc.put("adminIds", idListToStringList(org.adminIds()));
         doc.put("reviewIds", idListToStringList(org.reviewIds()));
-        
+
         // Image and event IDs
         doc.put("profileImageId", org.profileImageId());
         doc.put("eventIds", org.eventIds());
         doc.put("announcementIds", org.announcementIds());
-        doc.put("bannerImageId", org.bannerImageId());
-        
+
         return doc;
     }
 
@@ -203,7 +202,7 @@ public class DocumentConverter {
         String name = doc.getString("name");
         String typeStr = doc.getString("type");
         OrganizationType type = typeStr != null ? OrganizationType.valueOf(typeStr) : null;
-        
+
         String description = doc.getString("description");
         String contactEmail = doc.getString("contactEmail");
         String recruitingStatusStr = doc.getString("recruitingStatus");
@@ -220,24 +219,22 @@ public class DocumentConverter {
         String profileImageId = doc.getString("profileImageId");
         List<String> eventIds = doc.getList("eventIds", String.class, new ArrayList<>());
         List<String> announcementIds = doc.getList("announcementIds", String.class, new ArrayList<>());
-        String bannerImageId = doc.getString("bannerImageId");
 
         return new Organization(
-            orgId,
-            name,
-            type,
-            description,
-            contactEmail,
-            recruitingStatus,
-            location,
-            links,
-            memberIds,
-            adminIds,
-            reviewIds,
-            profileImageId,
-            eventIds,
-            announcementIds,
-            bannerImageId
+                orgId,
+                name,
+                type,
+                description,
+                contactEmail,
+                recruitingStatus,
+                location,
+                links,
+                memberIds,
+                adminIds,
+                reviewIds,
+                profileImageId,
+                eventIds,
+                announcementIds
         );
     }
 
@@ -259,10 +256,10 @@ public class DocumentConverter {
             return new OrganizationLinks(null, null, null, null);
         }
         return new OrganizationLinks(
-            doc.getString("website"),
-            doc.getString("linkedIn"),
-            doc.getString("instagram"),
-            doc.getString("discord")
+                doc.getString("website"),
+                doc.getString("linkedIn"),
+                doc.getString("instagram"),
+                doc.getString("discord")
         );
     }
 

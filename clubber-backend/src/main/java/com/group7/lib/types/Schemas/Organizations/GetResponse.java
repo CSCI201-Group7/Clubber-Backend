@@ -24,8 +24,7 @@ public record GetResponse(
     String[] reviewIds,
     String profileImageId,
     String[] eventIds,
-    String[] announcementIds,
-    String bannerImageId
+    String[] announcementIds
 ) {
     public GetResponse(Organization organization) {
         this(
@@ -42,8 +41,7 @@ public record GetResponse(
             convertToStringArray(organization.reviewIds()),
             organization.profileImageId(),
             convertToStringArray(organization.eventIds()),
-            convertToStringArray(organization.announcementIds()),
-            organization.bannerImageId()
+            convertToStringArray(organization.announcementIds())
         );
     }
 

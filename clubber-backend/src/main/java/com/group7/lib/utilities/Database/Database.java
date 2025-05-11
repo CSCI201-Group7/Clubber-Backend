@@ -7,7 +7,6 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
 import com.mongodb.ConnectionString;
@@ -89,26 +88,26 @@ public class Database {
         return this.database.getCollection(collection.getCollectionName()).find(query).into(new ArrayList<>());
     }
 
-    public FileId upload(String filename, InputStream stream) {
+    public String upload(String filename, InputStream stream) {
         try {
             ObjectId fileId = files.uploadFromStream(filename, stream);
-            return new FileId(fileId.toHexString());
+            return fileId.toHexString();
         } catch (MongoException e) {
             throw new RuntimeException("Failed to upload file to GridFS", e);
         }
     }
 
-    public InputStream download(FileId fileId) {
+    public InputStream download(String fileId) {
         try {
-            return files.openDownloadStream(new ObjectId(fileId.toString()));
+            return files.openDownloadStream(new ObjectId(fileId));
         } catch (MongoException e) {
             throw new RuntimeException("Failed to download file from GridFS", e);
         }
     }
 
-    public String getFilename(FileId fileId) {
+    public String getFilename(String fileId) {
         try {
-            GridFSFile fileInfo = files.find(new Document("_id", new ObjectId(fileId.toString()))).first();
+            GridFSFile fileInfo = files.find(new Document("_id", new ObjectId(fileId))).first();
             if (fileInfo != null) {
                 return fileInfo.getFilename();
             }
@@ -118,7 +117,7 @@ public class Database {
         }
     }
 
-    public void deleteFile(FileId fileId) {
-        files.delete(new ObjectId(fileId.toString()));
+    public void deleteFile(String fileId) {
+        files.delete(new ObjectId(fileId));
     }
 }

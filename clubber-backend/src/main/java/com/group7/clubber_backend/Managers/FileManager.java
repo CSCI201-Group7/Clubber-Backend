@@ -24,18 +24,18 @@ public class FileManager {
     }
 
     public FileId upload(String filename, InputStream stream) {
-        return this.database.upload(filename, stream);
+        return new FileId(this.database.upload(filename, stream));
     }
 
     public InputStream download(FileId fileId) {
-        return this.database.download(fileId);
+        return this.database.download(fileId.toString());
     }
 
     public String getFilename(FileId fileId) {
-        return this.database.getFilename(fileId);
+        return this.database.getFilename(fileId.toString());
     }
 
     public void delete(FileId fileId) {
-        this.database.deleteFile(fileId);
+        this.database.deleteFile(fileId.toString());
     }
 }

@@ -25,6 +25,5 @@ public record Organization(
     List<ReviewId> reviewIds,
     String profileImageId,
     List<String> eventIds,
-    List<String> announcementIds,
-    String bannerImageId
+    List<String> announcementIds
 ) {}

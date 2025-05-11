@@ -151,7 +151,11 @@ public class AnnouncementController {
         if (organization == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found");
         }
-        List<Announcement> announcements = announcementManager.getByOrganizationId(orgId);
+        List<AnnouncementId> announcementIds = new ArrayList<>(organization.announcementIds() != null ? organization.announcementIds() : new ArrayList<>());
+        if (announcementIds.isEmpty()) {
+            return new GetByOrgResponse(new ArrayList<>());
+        }
+        List<Announcement> announcements = announcementManager.list(announcementIds.toArray(AnnouncementId[]::new));
         return new GetByOrgResponse(announcements);
     }
 }

@@ -189,7 +189,7 @@ public class ReviewManager extends Manager<Review> {
         Object searchValue = value;
         if (field.equals("rating")) { // Example: convert rating to integer
             try {
-                searchValue = Integer.parseInt(value);
+                searchValue = Integer.valueOf(value);
             } catch (NumberFormatException e) {
                 logger.log("Invalid rating value for search: " + value, LogLevel.WARNING);
                 return new ArrayList<>();

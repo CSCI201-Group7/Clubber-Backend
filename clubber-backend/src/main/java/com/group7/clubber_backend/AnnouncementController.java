@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,7 +32,8 @@ import com.group7.lib.types.Schemas.Announcements.GetByOrgResponse;
 import com.group7.lib.types.Schemas.Announcements.GetResponse;
 import com.group7.lib.types.Schemas.Announcements.PostResponse;
 
-@RestController("/announcements")
+@RestController
+@RequestMapping("/announcements")
 public class AnnouncementController {
 
     private final AnnouncementManager announcementManager = AnnouncementManager.getInstance();

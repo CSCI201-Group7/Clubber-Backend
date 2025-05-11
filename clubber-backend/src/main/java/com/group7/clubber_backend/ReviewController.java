@@ -119,7 +119,7 @@ public class ReviewController {
     // Only the author of the review should be able to update it.
     @PutMapping("/{reviewIdStr}")
     public PutResponse updateReview(@RequestHeader("Authorization") String token,
-                                  @PathVariable String reviewIdStr,
+                                  @PathVariable String reviewId,
                                   @RequestParam(value = "rating", required = false) Integer rating,
                                   @RequestParam(value = "text", required = false) String text) {
         if (token == null) {
@@ -130,8 +130,8 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        ReviewId reviewId = new ReviewId(reviewIdStr);
-        Review existingReview = reviewManager.get(reviewId);
+        ReviewId reviewIdStr = new ReviewId(reviewId);
+        Review existingReview = reviewManager.get(reviewIdStr);
 
         if (existingReview == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
@@ -169,7 +169,7 @@ public class ReviewController {
     // Only the author or an admin should be able to delete it.
     @DeleteMapping("/{reviewId}")
     public DeleteResponse deleteReview(@RequestHeader("Authorization") String token,
-                                       @PathVariable String reviewIdStr) {
+                                       @PathVariable String reviewId) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -178,8 +178,8 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        ReviewId reviewId = new ReviewId(reviewIdStr);
-        Review reviewToDelete = reviewManager.get(reviewId);
+        ReviewId reviewIdStr = new ReviewId(reviewId);
+        Review reviewToDelete = reviewManager.get(reviewIdStr);
 
         if (reviewToDelete == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
@@ -191,7 +191,7 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not authorized to delete this review");
         }
 
-        reviewManager.delete(reviewId);
+        reviewManager.delete(reviewIdStr);
         return new DeleteResponse("Review deleted successfully"); // Assuming DeleteResponse schema
     }
 } 

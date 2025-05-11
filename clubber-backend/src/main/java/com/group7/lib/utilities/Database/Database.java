@@ -1,5 +1,6 @@
 package com.group7.lib.utilities.Database;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,9 @@ import com.mongodb.ServerApiVersion;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.gridfs.GridFSBucket;
+import com.mongodb.client.gridfs.GridFSBuckets;
+import com.mongodb.client.gridfs.model.GridFSFile;
 
 public class Database {
 
@@ -25,6 +29,7 @@ public class Database {
 
     private MongoClient mongoClient;
     private MongoDatabase database;
+    private GridFSBucket files;
 
     private Database() {
         this.logger.log("Initializing database", LogLevel.INFO);
@@ -43,6 +48,7 @@ public class Database {
         try {
             this.mongoClient = MongoClients.create(settings);
             this.database = mongoClient.getDatabase(DatabaseConfig.DATABASE_NAME);
+            this.files = GridFSBuckets.create(this.database, "files");
             this.database.runCommand(new Document("ping", 1));
             this.logger.log("Database connected", LogLevel.INFO);
         } catch (MongoException e) {
@@ -80,5 +86,38 @@ public class Database {
 
     public List<Document> list(DatabaseCollection collection, Document query) {
         return this.database.getCollection(collection.getCollectionName()).find(query).into(new ArrayList<>());
+    }
+
+    public String upload(String filename, InputStream stream) {
+        try {
+            ObjectId fileId = files.uploadFromStream(filename, stream);
+            return fileId.toHexString();
+        } catch (MongoException e) {
+            throw new RuntimeException("Failed to upload file to GridFS", e);
+        }
+    }
+
+    public InputStream download(String fileId) {
+        try {
+            return files.openDownloadStream(new ObjectId(fileId));
+        } catch (MongoException e) {
+            throw new RuntimeException("Failed to download file from GridFS", e);
+        }
+    }
+
+    public String getFilename(String fileId) {
+        try {
+            GridFSFile fileInfo = files.find(new Document("_id", new ObjectId(fileId))).first();
+            if (fileInfo != null) {
+                return fileInfo.getFilename();
+            }
+            return null;
+        } catch (MongoException e) {
+            throw new RuntimeException("Failed to get filename from GridFS", e);
+        }
+    }
+
+    public void deleteFile(String fileId) {
+        files.delete(new ObjectId(fileId));
     }
 }

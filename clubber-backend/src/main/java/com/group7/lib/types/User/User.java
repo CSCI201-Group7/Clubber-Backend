@@ -10,35 +10,37 @@ import com.group7.lib.types.Ids.UserId;
 
 public class User {
 
-    private final UserId id;
+    private UserId id;
     private String username;
     private String name;
     private String email;
+    private String password;
     private Year year;
-    private ReviewId[] reviewIds;
-    private CommentId[] commentIds;
-    private OrganizationId[] organizationIds;
-    private UserId[] contactIds;
-    private Favorites favorites;
+    private ReviewId[] reviewIds = new ReviewId[0];
+    private CommentId[] commentIds = new CommentId[0];
+    private OrganizationId[] organizationIds = new OrganizationId[0];
+    private UserId[] contactIds = new UserId[0];
 
-    public User(UserId id, String username, String name, String email, Year year, ReviewId[] reviewIds, CommentId[] commentIds, OrganizationId[] organizationIds, UserId[] contactIds, Favorites favorites) {
-        this.id = Objects.requireNonNull(id, "User ID cannot be null");
+    public User(String username, String email, String password) {
         this.username = Objects.requireNonNull(username, "Username cannot be null");
-        this.name = Objects.requireNonNull(name, "Name cannot be null");
         this.email = Objects.requireNonNull(email, "Email cannot be null");
-        this.year = Objects.requireNonNull(year, "Year cannot be null");
+        this.password = Objects.requireNonNull(password, "Password cannot be null");
+    }
 
-        // Create defensive copies of arrays
-        this.reviewIds = reviewIds != null ? Arrays.copyOf(reviewIds, reviewIds.length) : new ReviewId[0];
-        this.commentIds = commentIds != null ? Arrays.copyOf(commentIds, commentIds.length) : new CommentId[0];
-        this.organizationIds = organizationIds != null ? Arrays.copyOf(organizationIds, organizationIds.length) : new OrganizationId[0];
-        this.contactIds = contactIds != null ? Arrays.copyOf(contactIds, contactIds.length) : new UserId[0];
+    public String getPassword() {
+        return this.password;
+    }
 
-        this.favorites = Objects.requireNonNull(favorites, "Favorites cannot be null");
+    public void setPassword(String password) {
+        this.password = Objects.requireNonNull(password, "Password cannot be null");
     }
 
     public UserId getId() {
         return this.id;
+    }
+
+    public void setId(UserId id) {
+        this.id = Objects.requireNonNull(id, "User ID cannot be null");
     }
 
     public String getUsername() {
@@ -54,7 +56,7 @@ public class User {
     }
 
     public void setName(String name) {
-        this.name = Objects.requireNonNull(name, "Name cannot be null");
+        this.name = name;
     }
 
     public String getEmail() {
@@ -70,7 +72,7 @@ public class User {
     }
 
     public void setYear(Year year) {
-        this.year = Objects.requireNonNull(year, "Year cannot be null");
+        this.year = year;
     }
 
     public ReviewId[] getReviewIds() {
@@ -107,13 +109,5 @@ public class User {
     public void setContactIds(UserId[] contactIds) {
         this.contactIds = contactIds != null
                 ? Arrays.copyOf(contactIds, contactIds.length) : new UserId[0];
-    }
-
-    public Favorites getFavorites() {
-        return this.favorites;
-    }
-
-    public void setFavorites(Favorites favorites) {
-        this.favorites = Objects.requireNonNull(favorites, "Favorites cannot be null");
     }
 }

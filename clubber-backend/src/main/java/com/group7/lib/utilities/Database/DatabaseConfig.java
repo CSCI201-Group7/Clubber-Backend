@@ -11,5 +11,6 @@ public class DatabaseConfig {
     public static final String REVIEW_COLLECTION = "reviews";
     public static final String COMMENT_COLLECTION = "comments";
     public static final String REPORT_COLLECTION = "reports";
+    public static final String FILE_COLLECTION = "files";
     public static final String TEST_COLLECTION = "test";
 }

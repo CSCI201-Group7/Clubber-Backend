@@ -14,9 +14,7 @@ public record GetResponse(
         String[] reviewIds,
         String[] commentIds,
         String[] organizationIds,
-        String[] contactIds,
-        String[] favoriteReviewIds,
-        String[] favoriteOrganizationIds) {
+        String[] contactIds) {
 
     public GetResponse(User user) {
         this(
@@ -24,13 +22,11 @@ public record GetResponse(
                 user.getUsername(),
                 user.getName(),
                 user.getEmail(),
-                user.getYear().toString(),
+                user.getYear() != null ? user.getYear().toString() : null,
                 convertToStringArray(user.getReviewIds()),
                 convertToStringArray(user.getCommentIds()),
                 convertToStringArray(user.getOrganizationIds()),
-                convertToStringArray(user.getContactIds()),
-                convertToStringArray(user.getFavorites().getReviewIds()),
-                convertToStringArray(user.getFavorites().getOrganizationIds())
+                convertToStringArray(user.getContactIds())
         );
     }
 
@@ -39,6 +35,7 @@ public record GetResponse(
             return new String[0];
         }
         String[] result = new String[ids.length];
+
         for (int i = 0; i < ids.length; i++) {
             result[i] = ids[i].toString();
         }

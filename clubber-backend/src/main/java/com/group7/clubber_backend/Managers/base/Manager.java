@@ -6,7 +6,7 @@ import com.group7.lib.types.Ids.base.Id;
 
 public abstract class Manager<T> {
 
-    public abstract void create(T object);
+    public abstract Id create(T object);
 
     public abstract void update(T object);
 
@@ -16,6 +16,7 @@ public abstract class Manager<T> {
 
     public abstract List<T> getAll();
 
-    public abstract void list(Id[] ids);
+    public abstract List<T> list(Id[] ids);
 
+    public abstract List<T> search(String query);
 }

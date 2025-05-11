@@ -4,4 +4,4 @@ public enum AnnouncementImportance {
     Low,
     Normal,
     High
-} 
+}

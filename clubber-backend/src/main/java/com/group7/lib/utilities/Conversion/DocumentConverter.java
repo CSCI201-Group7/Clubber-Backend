@@ -1,7 +1,10 @@
 package com.group7.lib.utilities.Conversion;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -9,15 +12,20 @@ import java.util.stream.Collectors;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import com.group7.lib.types.Announcement.Announcement;
+import com.group7.lib.types.Comment.Comment;
+import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.CommentId;
+import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
-import com.group7.lib.types.Ids.ReviewId; // Assuming logger might be needed later or passed
+import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Organization.OrganizationLinks;
 import com.group7.lib.types.Organization.OrganizationType;
 import com.group7.lib.types.Organization.RecruitingStatus;
+import com.group7.lib.types.Review.Review;
 import com.group7.lib.types.User.User;
 import com.group7.lib.types.User.Year;
 import com.group7.lib.utilities.Logger.LogLevel;
@@ -182,7 +190,7 @@ public class DocumentConverter {
         // Image and event IDs
         doc.put("profileImageId", org.profileImageId());
         doc.put("eventIds", org.eventIds());
-        doc.put("announcementIds", org.announcementIds());
+        doc.put("announcementIds", idListToStringList(org.announcementIds()));
 
         return doc;
     }
@@ -218,7 +226,7 @@ public class DocumentConverter {
         // Image and event IDs
         String profileImageId = doc.getString("profileImageId");
         List<String> eventIds = doc.getList("eventIds", String.class, new ArrayList<>());
-        List<String> announcementIds = doc.getList("announcementIds", String.class, new ArrayList<>());
+        List<AnnouncementId> announcementIds = stringListToIdList(doc.getList("announcementIds", String.class, new ArrayList<>()), AnnouncementId.class);
 
         return new Organization(
                 orgId,
@@ -263,4 +271,177 @@ public class DocumentConverter {
         );
     }
 
+    // --- Announcement Conversion ---
+    public static Document announcementToDocument(Announcement announcement) {
+        if (announcement == null) {
+            return null;
+        }
+        Document doc = new Document();
+        // ID is set by the database on creation, so not included here for new documents.
+        // If updating, the ID would be used in the query, not in the document body typically.
+        doc.put("organizationId", announcement.organizationId() != null ? announcement.organizationId().toString() : null);
+        doc.put("authorId", announcement.authorId() != null ? announcement.authorId().toString() : null);
+        doc.put("title", announcement.title());
+        doc.put("content", announcement.content());
+        doc.put("attachmentIds", idListToStringList(announcement.attachmentIds()));
+        doc.put("createdAt", announcement.createdAt() != null ? Date.from(announcement.createdAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("updatedAt", announcement.updatedAt() != null ? Date.from(announcement.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        return doc;
+    }
+
+    public static Announcement documentToAnnouncement(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+
+        ObjectId objectId = doc.getObjectId("_id");
+        if (objectId == null) {
+            logger.log("Announcement Document is missing _id field.", LogLevel.ERROR);
+            return null;
+        }
+        AnnouncementId announcementId = new AnnouncementId(objectId.toHexString());
+
+        String orgIdStr = doc.getString("organizationId");
+        OrganizationId organizationId = orgIdStr != null ? new OrganizationId(orgIdStr) : null;
+
+        String authorIdStr = doc.getString("authorId");
+        UserId authorId = authorIdStr != null ? new UserId(authorIdStr) : null;
+
+        String title = doc.getString("title");
+        String content = doc.getString("content");
+        List<FileId> attachmentIds = stringListToIdList(doc.getList("attachmentIds", String.class, new ArrayList<>()), FileId.class);
+
+        Date createdAtDate = doc.getDate("createdAt");
+        LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        Date updatedAtDate = doc.getDate("updatedAt");
+        LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        return new Announcement(
+                announcementId,
+                organizationId,
+                authorId,
+                title,
+                content,
+                attachmentIds,
+                createdAt,
+                updatedAt
+        );
+    }
+
+    // --- Review Conversion ---
+    public static Document reviewToDocument(Review review) {
+        if (review == null) {
+            return null;
+        }
+        Document doc = new Document();
+        // review.id() is handled by DB if null, or used for querying if not null.
+        // Not setting _id here to let MongoDB generate it on insert.
+        doc.put("userId", review.userId() != null ? review.userId().toString() : null);
+        doc.put("organizationId", review.organizationId() != null ? review.organizationId().toString() : null);
+        doc.put("rating", review.rating());
+        doc.put("text", review.text());
+        doc.put("createdAt", review.createdAt() != null ? Date.from(review.createdAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("updatedAt", review.updatedAt() != null ? Date.from(review.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        return doc;
+    }
+
+    public static Review documentToReview(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+
+        ObjectId objectId = doc.getObjectId("_id");
+        if (objectId == null) {
+            logger.log("Review Document is missing _id field.", LogLevel.ERROR);
+            return null;
+        }
+        ReviewId reviewId = new ReviewId(objectId.toHexString());
+
+        String userIdStr = doc.getString("userId");
+        UserId userId = userIdStr != null ? new UserId(userIdStr) : null;
+
+        String orgIdStr = doc.getString("organizationId");
+        OrganizationId organizationId = orgIdStr != null ? new OrganizationId(orgIdStr) : null;
+
+        Integer rating = doc.getInteger("rating");
+        if (rating == null) {
+            // Handle case where rating might be missing or not an integer
+            // For now, let's assume it's critical and log an error or assign a default
+            logger.log("Review Document is missing 'rating' field or it's not an integer.", LogLevel.WARNING);
+            // Depending on requirements, you might return null or throw an exception
+            // For a record, all fields are typically expected.
+            // If a default is not appropriate, returning null might be safer.
+            return null;
+        }
+
+        String text = doc.getString("text");
+
+        Date createdAtDate = doc.getDate("createdAt");
+        LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        Date updatedAtDate = doc.getDate("updatedAt");
+        LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        return new Review(
+                reviewId,
+                userId,
+                organizationId,
+                rating, // Safe due to check above
+                text,
+                createdAt,
+                updatedAt
+        );
+    }
+
+    // --- Comment Conversion ---
+    public static Document commentToDocument(Comment comment) {
+        if (comment == null) {
+            return null;
+        }
+        Document doc = new Document();
+        // comment.id() is handled by DB.
+        doc.put("userId", comment.userId() != null ? comment.userId().toString() : null);
+        doc.put("reviewId", comment.reviewId() != null ? comment.reviewId().toString() : null);
+        doc.put("text", comment.text());
+        doc.put("createdAt", comment.createdAt() != null ? Date.from(comment.createdAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("updatedAt", comment.updatedAt() != null ? Date.from(comment.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        return doc;
+    }
+
+    public static Comment documentToComment(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+
+        ObjectId objectId = doc.getObjectId("_id");
+        if (objectId == null) {
+            logger.log("Comment Document is missing _id field.", LogLevel.ERROR);
+            return null;
+        }
+        CommentId commentId = new CommentId(objectId.toHexString());
+
+        String userIdStr = doc.getString("userId");
+        UserId userId = userIdStr != null ? new UserId(userIdStr) : null;
+
+        String reviewIdStr = doc.getString("reviewId");
+        ReviewId reviewId = reviewIdStr != null ? new ReviewId(reviewIdStr) : null;
+
+        String text = doc.getString("text");
+
+        Date createdAtDate = doc.getDate("createdAt");
+        LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        Date updatedAtDate = doc.getDate("updatedAt");
+        LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
+
+        return new Comment(
+                commentId,
+                userId,
+                reviewId,
+                text,
+                createdAt,
+                updatedAt
+        );
+    }
 }

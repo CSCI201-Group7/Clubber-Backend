@@ -2,6 +2,7 @@ package com.group7.lib.types.Organization;
 
 import java.util.List;
 
+import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
@@ -25,5 +26,5 @@ public record Organization(
     List<ReviewId> reviewIds,
     String profileImageId,
     List<String> eventIds,
-    List<String> announcementIds
+    List<AnnouncementId> announcementIds
 ) {}

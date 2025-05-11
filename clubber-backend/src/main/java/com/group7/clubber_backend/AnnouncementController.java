@@ -143,7 +143,7 @@ public class AnnouncementController {
         return new GetResponse(announcement);
     }
 
-    @GetMapping("/organizations/{organizationId}/announcements")
+    @GetMapping("/organizations/{organizationId}")
     public GetByOrgResponse getAnnouncementsByOrganizationId(@PathVariable String organizationId) {
         OrganizationId orgId = new OrganizationId(organizationId);
         // Check if organization exists (optional, but good practice)
@@ -156,6 +156,6 @@ public class AnnouncementController {
             return new GetByOrgResponse(new ArrayList<>());
         }
         List<Announcement> announcements = announcementManager.list(announcementIds.toArray(AnnouncementId[]::new));
-        return new GetByOrgResponse(announcements);
+        return GetByOrgResponse.fromAnnouncements(announcements);
     }
 }

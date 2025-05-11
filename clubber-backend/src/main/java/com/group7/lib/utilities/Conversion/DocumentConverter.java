@@ -1,5 +1,6 @@
 package com.group7.lib.utilities.Conversion;
 
+import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ public class DocumentConverter {
                     } catch (NoSuchMethodException e) {
                         logger.log("ID class " + idClass.getSimpleName() + " does not have a String constructor.", LogLevel.ERROR);
                         return null;
-                    } catch (Exception e) {
+                    } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | SecurityException | InvocationTargetException e) {
                         logger.log("Error converting string to ID (" + idClass.getSimpleName() + "): " + strId + ", Error: " + e.getMessage(), LogLevel.ERROR);
                         return null;
                     }

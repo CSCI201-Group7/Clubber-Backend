@@ -126,7 +126,7 @@ public class Database {
             if (fileInfo != null && fileInfo.getMetadata() != null) {
                 return fileInfo.getMetadata().getString("contentType");
             }
-            return null; // Or a default content type like "application/octet-stream"
+            return null;
         } catch (MongoException e) {
             throw new RuntimeException("Failed to get contentType from GridFS", e);
         }

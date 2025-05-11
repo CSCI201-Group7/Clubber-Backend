@@ -1,23 +1,35 @@
 package com.group7.clubber_backend;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam; // Assuming schema package
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.group7.clubber_backend.Managers.CommentManager;
 import com.group7.clubber_backend.Managers.ReviewManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Comment.Comment;
-import com.group7.lib.types.Review.Review;
-import com.group7.lib.types.User.User;
 import com.group7.lib.types.Ids.CommentId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
-import com.group7.lib.types.Schemas.Comments.*; // Assuming schema package
-
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.List;
+import com.group7.lib.types.Review.Review;
+import com.group7.lib.types.Schemas.Comments.DeleteResponse;
+import com.group7.lib.types.Schemas.Comments.GetAllByReviewResponse;
+import com.group7.lib.types.Schemas.Comments.GetResponse;
+import com.group7.lib.types.Schemas.Comments.PostResponse;
+import com.group7.lib.types.Schemas.Comments.PutResponse;
+import com.group7.lib.types.User.User;
 
 @RestController
 @RequestMapping("/reviews/{reviewId}/comments") // Nested under reviews
@@ -31,8 +43,8 @@ public class CommentController {
     // Create a new comment on a review
     @PostMapping
     public PostResponse createComment(@RequestHeader("Authorization") String token,
-                                    @PathVariable String reviewId,
-                                    @RequestParam("text") String text) {
+            @PathVariable String reviewId,
+            @RequestParam("text") String text) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -85,8 +97,8 @@ public class CommentController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
         }
         // Optional: Check if comment.reviewId() matches reviewIdStr for consistency
-        if (!comment.reviewId().toString().equals(reviewId)){
-             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to this review");
+        if (!comment.reviewId().toString().equals(reviewId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to this review");
         }
 
         return new GetResponse(comment); // Assuming GetResponse schema
@@ -109,9 +121,9 @@ public class CommentController {
     // Update an existing comment
     @PutMapping("/{commentId}")
     public PutResponse updateComment(@RequestHeader("Authorization") String token,
-                                   @PathVariable String reviewId,
-                                   @PathVariable String commentId,
-                                   @RequestParam("text") String text) {
+            @PathVariable String reviewId,
+            @PathVariable String commentId,
+            @RequestParam("text") String text) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -153,8 +165,8 @@ public class CommentController {
     // Delete a comment
     @DeleteMapping("/{commentId}")
     public DeleteResponse deleteComment(@RequestHeader("Authorization") String token,
-                                        @PathVariable String reviewId,
-                                        @PathVariable String commentId) {
+            @PathVariable String reviewId,
+            @PathVariable String commentId) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -184,4 +196,4 @@ public class CommentController {
         commentManager.delete(commentIdStr);
         return new DeleteResponse("Comment deleted successfully"); // Assuming DeleteResponse schema
     }
-} 
+}

@@ -1,6 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
 alwaysApply: true
 ---
 This is a SpringBoot RESTful backend project. The project is structured and configured as followed.
@@ -59,6 +64,6 @@ Under `group7/lib`. Use when modules may be referenced by multiple segments of c
 - Method Names: camelCase
 - Constant Names: ALL_CAPS/CONSTANT_CASE
 
-All Managers and Processors should be written in **[Singleton Pattern](https://en.wikipedia.org/wiki/Singleton_pattern)**
+All Managers and Processors should be written in **[Singleton Pattern](mdc:https:/en.wikipedia.org/wiki/Singleton_pattern)**
 
 IDs for different collections should be extended from `String` class as peer classes to avoid referencing confusion.

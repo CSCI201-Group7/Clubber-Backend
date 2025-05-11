@@ -16,8 +16,10 @@ import org.bson.types.ObjectId;
 import com.group7.lib.types.Announcement.Announcement;
 import com.group7.lib.types.Announcement.AnnouncementImportance;
 import com.group7.lib.types.Comment.Comment;
+import com.group7.lib.types.Event.Event;
 import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.CommentId;
+import com.group7.lib.types.Ids.EventId;
 import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
@@ -312,7 +314,31 @@ public class DocumentConverter {
 
         String title = doc.getString("title");
         String content = doc.getString("content");
-        List<FileId> attachmentIds = stringListToIdList(doc.getList("attachmentIds", String.class, new ArrayList<>()), FileId.class);
+
+        // Robustly handle attachmentIds by using doc.get() and manual list processing
+        Object rawAttachmentIdsField = doc.get("attachmentIds");
+        List<String> stringAttachmentIds = new ArrayList<>();
+
+        if (rawAttachmentIdsField instanceof List) {
+            List<?> listFromDb = (List<?>) rawAttachmentIdsField;
+            for (Object item : listFromDb) {
+                if (item instanceof String string) {
+                    stringAttachmentIds.add(string);
+                } else if (item instanceof ObjectId objectId1) {
+                    stringAttachmentIds.add(objectId1.toHexString());
+                } else if (item != null) {
+                    logger.log("Unexpected type in attachmentIds list for announcement " + announcementId.toString()
+                            + ": Type=" + item.getClass().getName() + ", Value=" + item.toString() + ". Skipping.", LogLevel.WARNING);
+                }
+            }
+        } else if (rawAttachmentIdsField != null) {
+            // Log if attachmentIds is present but not a list
+            logger.log("Field 'attachmentIds' is not a List for announcement " + announcementId.toString()
+                    + ". Actual type: " + rawAttachmentIdsField.getClass().getName() + ". Treating as empty.", LogLevel.WARNING);
+        }
+        // If rawAttachmentIdsField is null, stringAttachmentIds remains empty.
+
+        List<FileId> attachmentIds = stringListToIdList(stringAttachmentIds, FileId.class);
 
         Date createdAtDate = doc.getDate("createdAt");
         LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
@@ -449,6 +475,70 @@ public class DocumentConverter {
                 text,
                 createdAt,
                 updatedAt
+        );
+    }
+
+    // --- Event Conversion ---
+    public static Document eventToDocument(Event event) {
+        if (event == null) {
+            return null;
+        }
+        Document doc = new Document();
+        // Event ID is handled by the database on creation (if event.id() is null or represents a new event).
+        // If event.id() is not null, it implies an update, but we don't set _id in the update document body itself.
+        // The ID is used in the query for update operations.
+        doc.put("organizationId", event.organizationId() != null ? event.organizationId().toString() : null);
+        doc.put("title", event.title());
+        doc.put("description", event.description());
+        doc.put("location", event.location());
+        doc.put("startTime", event.startTime()); // Directly store java.util.Date, MongoDB driver handles BSON Date
+        doc.put("endTime", event.endTime());   // Directly store java.util.Date
+        doc.put("rsvpLink", event.rsvpLink());
+        doc.put("attachmentIds", idListToStringList(event.attachmentIds())); // Convert List<FileId> to List<String>
+
+        // Note: Fields like authorId, isOnline, tags, coverImageId, maxCapacity, visibility, rsvpUserIds, waitlistUserIds,
+        // createdAt, updatedAt were removed from EventController based on Event record definition.
+        // If they are ever re-added to the Event record, they should be handled here.
+        return doc;
+    }
+
+    public static Event documentToEvent(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+
+        ObjectId objectId = doc.getObjectId("_id");
+        if (objectId == null) {
+            logger.log("Event Document is missing _id field.", LogLevel.ERROR);
+            return null;
+        }
+        EventId eventId = new EventId(objectId.toHexString());
+
+        String orgIdStr = doc.getString("organizationId");
+        OrganizationId organizationId = orgIdStr != null ? new OrganizationId(orgIdStr) : null;
+
+        String title = doc.getString("title");
+        String description = doc.getString("description");
+        String location = doc.getString("location");
+
+        Date startTime = doc.getDate("startTime"); // Retrieve as java.util.Date
+        Date endTime = doc.getDate("endTime");     // Retrieve as java.util.Date
+
+        String rsvpLink = doc.getString("rsvpLink");
+
+        List<String> stringAttachmentIds = doc.getList("attachmentIds", String.class, new ArrayList<>());
+        List<FileId> attachmentIds = stringListToIdList(stringAttachmentIds, FileId.class); // Convert List<String> to List<FileId>
+
+        return new Event(
+                eventId,
+                organizationId,
+                title,
+                description,
+                location,
+                startTime,
+                endTime,
+                rsvpLink,
+                attachmentIds
         );
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.lib.types.Ids.FileId;
+import com.group7.lib.types.Schemas.Files.GetMetaResponse;
 import com.group7.lib.types.Schemas.Files.UploadResponse;
 
 @RestController
@@ -73,6 +74,20 @@ public class FileController {
         } catch (IOException e) {
             return ResponseEntity.status(500).build();
         }
+    }
+
+    @GetMapping("/meta/{id}")
+    public ResponseEntity<GetMetaResponse> getFileMeta(@PathVariable String id) {
+        FileId fileId = new FileId(id);
+        String filename = FileManager.getInstance().getFilename(fileId);
+        String contentType = FileManager.getInstance().getContentType(fileId);
+
+        if (filename == null) { // Assuming filename would be null if file doesn't exist or metadata is inaccessible
+            return ResponseEntity.status(404).build();
+        }
+
+        GetMetaResponse metaResponse = new GetMetaResponse(filename, contentType);
+        return ResponseEntity.ok(metaResponse);
     }
 
     @DeleteMapping("/{id}")

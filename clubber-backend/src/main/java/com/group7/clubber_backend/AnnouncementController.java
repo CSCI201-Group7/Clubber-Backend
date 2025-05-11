@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.group7.clubber_backend.Managers.AnnouncementManager;
 import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.clubber_backend.Managers.OrganizationManager;
+import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Announcement.Announcement;
 import com.group7.lib.types.Announcement.AnnouncementImportance;
@@ -32,6 +33,7 @@ import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Schemas.Announcements.GetByOrgResponse;
 import com.group7.lib.types.Schemas.Announcements.GetResponse;
 import com.group7.lib.types.Schemas.Announcements.PostResponse;
+import com.group7.lib.types.User.User;
 
 @RestController
 @RequestMapping("/announcements")
@@ -41,8 +43,9 @@ public class AnnouncementController {
     private final OrganizationManager organizationManager = OrganizationManager.getInstance();
     private final FileManager fileManager = FileManager.getInstance();
     private final CredentialProcessor credentialProcessor = CredentialProcessor.getInstance();
+    private final UserManager userManager = UserManager.getInstance();
 
-    @PostMapping(value = "", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public PostResponse createAnnouncement(
             @RequestHeader("Authorization") String token,
             @RequestParam("organizationId") String organizationIdStr,
@@ -54,6 +57,11 @@ public class AnnouncementController {
         UserId authorId = credentialProcessor.verifyToken(token);
         if (authorId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
+        }
+
+        User user = userManager.get(authorId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
         OrganizationId organizationId = new OrganizationId(organizationIdStr);

@@ -117,7 +117,7 @@ public class ReviewController {
 
     // Update an existing review
     // Only the author of the review should be able to update it.
-    @PutMapping("/{reviewId}")
+    @PutMapping("/{reviewIdStr}")
     public PutResponse updateReview(@RequestHeader("Authorization") String token,
                                   @PathVariable String reviewIdStr,
                                   @RequestParam(value = "rating", required = false) Integer rating,

@@ -46,10 +46,27 @@ public class OrganizationController {
         return new GetResponse(organization);
     }
 
+    // Get all organizations that the user is a member of
     @GetMapping
+    public GetAllResponse getMembers(@RequestHeader("Authorization") String token) {
+        UserId userId = CredentialProcessor.getInstance().verifyToken(token);
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
+        }
+        User user = UserManager.getInstance().get(userId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        List<Organization> organizations = OrganizationManager.getInstance().search("memberIds:" + user.getId().toString());
+
+        return GetAllResponse.fromOrganizations(organizations);
+    }
+
+    @GetMapping("/all")
     public GetAllResponse getAll() {
         List<Organization> organizations = OrganizationManager.getInstance().getAll();
-        return new GetAllResponse(organizations);
+        return GetAllResponse.fromOrganizations(organizations);
     }
 
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
@@ -93,7 +110,7 @@ public class OrganizationController {
             try {
                 // Get the file extension from the filename
                 String extension = logoFilename.substring(logoFilename.lastIndexOf("."));
-                logoId = FileManager.getInstance().upload(UUID.randomUUID().toString() + "_" + extension, logo.getInputStream());
+                logoId = FileManager.getInstance().upload(UUID.randomUUID().toString() + "_" + extension, logo.getInputStream(), logo.getContentType());
             } catch (IOException e) {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload profile image");
             }

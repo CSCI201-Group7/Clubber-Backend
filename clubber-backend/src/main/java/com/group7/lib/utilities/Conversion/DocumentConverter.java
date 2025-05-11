@@ -13,6 +13,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.group7.lib.types.Announcement.Announcement;
+import com.group7.lib.types.Announcement.AnnouncementImportance;
 import com.group7.lib.types.Comment.Comment;
 import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.CommentId;
@@ -286,6 +287,7 @@ public class DocumentConverter {
         doc.put("attachmentIds", idListToStringList(announcement.attachmentIds()));
         doc.put("createdAt", announcement.createdAt() != null ? Date.from(announcement.createdAt().toInstant(ZoneOffset.UTC)) : null);
         doc.put("updatedAt", announcement.updatedAt() != null ? Date.from(announcement.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("importance", announcement.importance() != null ? announcement.importance().name() : null);
         return doc;
     }
 
@@ -317,6 +319,9 @@ public class DocumentConverter {
         Date updatedAtDate = doc.getDate("updatedAt");
         LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
 
+        String importanceStr = doc.getString("importance");
+        AnnouncementImportance importance = importanceStr != null ? AnnouncementImportance.valueOf(importanceStr) : null;
+
         return new Announcement(
                 announcementId,
                 organizationId,
@@ -325,7 +330,8 @@ public class DocumentConverter {
                 content,
                 attachmentIds,
                 createdAt,
-                updatedAt
+                updatedAt,
+                importance
         );
     }
 

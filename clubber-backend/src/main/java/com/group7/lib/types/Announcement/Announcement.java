@@ -16,5 +16,6 @@ public record Announcement(
     String content,
     List<FileId> attachmentIds,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    AnnouncementImportance importance
 ) {}

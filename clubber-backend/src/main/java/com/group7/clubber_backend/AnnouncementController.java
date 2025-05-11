@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.clubber_backend.Managers.OrganizationManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Announcement.Announcement;
+import com.group7.lib.types.Announcement.AnnouncementImportance;
 import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
@@ -31,7 +33,8 @@ import com.group7.lib.types.Schemas.Announcements.GetByOrgResponse;
 import com.group7.lib.types.Schemas.Announcements.GetResponse;
 import com.group7.lib.types.Schemas.Announcements.PostResponse;
 
-@RestController("/announcements")
+@RestController
+@RequestMapping("/announcements")
 public class AnnouncementController {
 
     private final AnnouncementManager announcementManager = AnnouncementManager.getInstance();
@@ -45,7 +48,8 @@ public class AnnouncementController {
             @RequestParam("organizationId") String organizationIdStr,
             @RequestParam("title") String title,
             @RequestParam("content") String content,
-            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments) {
+            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments,
+            @RequestParam(value = "importance", required = false) AnnouncementImportance importance) {
 
         UserId authorId = credentialProcessor.verifyToken(token);
         if (authorId == null) {
@@ -74,7 +78,7 @@ public class AnnouncementController {
                             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
                         }
                         String filename = UUID.randomUUID().toString() + extension;
-                        FileId uploadedFileId = fileManager.upload(filename, attachment.getInputStream());
+                        FileId uploadedFileId = fileManager.upload(filename, attachment.getInputStream(), attachment.getContentType());
                         if (uploadedFileId != null) {
                             attachmentIds.add(uploadedFileId);
                         }
@@ -89,14 +93,15 @@ public class AnnouncementController {
 
         LocalDateTime now = LocalDateTime.now();
         Announcement newAnnouncement = new Announcement(
-                null, // ID will be set by the database
+                new AnnouncementId(null), // ID will be set by the database
                 organizationId,
                 authorId,
                 title,
                 content,
                 attachmentIds,
-                now, // createdAt
-                now  // updatedAt
+                now,
+                now,
+                importance != null ? importance : AnnouncementImportance.Normal
         );
 
         AnnouncementId newAnnouncementId = (AnnouncementId) announcementManager.create(newAnnouncement);
@@ -109,20 +114,20 @@ public class AnnouncementController {
         currentAnnouncementIds.add(newAnnouncementId);
 
         Organization updatedOrganization = new Organization(
-            organization.id(),
-            organization.name(),
-            organization.type(),
-            organization.description(),
-            organization.contactEmail(),
-            organization.recruitingStatus(),
-            organization.location(),
-            organization.links(),
-            organization.memberIds(),
-            organization.adminIds(),
-            organization.reviewIds(),
-            organization.profileImageId(),
-            organization.eventIds(),
-            currentAnnouncementIds // updated list
+                organization.id(),
+                organization.name(),
+                organization.type(),
+                organization.description(),
+                organization.contactEmail(),
+                organization.recruitingStatus(),
+                organization.location(),
+                organization.links(),
+                organization.memberIds(),
+                organization.adminIds(),
+                organization.reviewIds(),
+                organization.profileImageId(),
+                organization.eventIds(),
+                currentAnnouncementIds // updated list
         );
         organizationManager.update(updatedOrganization);
 
@@ -149,4 +154,4 @@ public class AnnouncementController {
         List<Announcement> announcements = announcementManager.getByOrganizationId(orgId);
         return new GetByOrgResponse(announcements);
     }
-} 
+}

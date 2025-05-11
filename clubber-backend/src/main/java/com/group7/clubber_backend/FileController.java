@@ -30,20 +30,35 @@ public class FileController {
         FileId fileId = new FileId(id);
         InputStream fileStream = FileManager.getInstance().download(fileId);
         String filename = FileManager.getInstance().getFilename(fileId);
+        String contentType = FileManager.getInstance().getContentType(fileId);
         
         // Create a resource from the input stream
         InputStreamResource resource = new InputStreamResource(fileStream);
         
         // Set up headers for file download
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        if (contentType != null && contentType.startsWith("image/")) {
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"");
+        } else {
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        }
         headers.add(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
         headers.add(HttpHeaders.PRAGMA, "no-cache");
         headers.add(HttpHeaders.EXPIRES, "0");
         
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (contentType != null) {
+            try {
+                mediaType = MediaType.parseMediaType(contentType);
+            } catch (Exception e) {
+                // Log error or handle, fallback to octet-stream
+                System.err.println("Failed to parse content type: " + contentType + ", falling back to APPLICATION_OCTET_STREAM. Error: " + e.getMessage());
+            }
+        }
+        
         return ResponseEntity.ok()
                 .headers(headers)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentType(mediaType)
                 .body(resource);
     }
 
@@ -53,7 +68,7 @@ public class FileController {
             return ResponseEntity.status(400).build();
         }
         try {
-            FileId fileId = FileManager.getInstance().upload(filename, file.getInputStream());
+            FileId fileId = FileManager.getInstance().upload(filename, file.getInputStream(), file.getContentType());
             return ResponseEntity.ok(new UploadResponse(fileId));
         } catch (IOException e) {
             return ResponseEntity.status(500).build();

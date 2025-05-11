@@ -76,9 +76,9 @@ public class AnnouncementManager extends Manager<Announcement> {
 
         boolean success = database.update(COLLECTION, announcement.id().toString(), doc);
         if (success) {
-            logger.log("Updated announcement with ID: " + announcement.id().toString(), LogLevel.INFO);
+            logger.log("Updated announcement with ID: " + announcement.id(), LogLevel.INFO);
         } else {
-            logger.log("Failed to update announcement with ID: " + announcement.id().toString() + ". It might not exist.", LogLevel.WARNING);
+            logger.log("Failed to update announcement with ID: " + announcement.id() + ". It might not exist.", LogLevel.WARNING);
         }
     }
 

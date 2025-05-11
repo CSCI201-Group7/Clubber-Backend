@@ -20,6 +20,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 
 public class Database {
 
@@ -88,9 +89,11 @@ public class Database {
         return this.database.getCollection(collection.getCollectionName()).find(query).into(new ArrayList<>());
     }
 
-    public String upload(String filename, InputStream stream) {
+    public String upload(String filename, InputStream stream, String contentType) {
         try {
-            ObjectId fileId = files.uploadFromStream(filename, stream);
+            GridFSUploadOptions options = new GridFSUploadOptions()
+                    .metadata(new Document("contentType", contentType));
+            ObjectId fileId = files.uploadFromStream(filename, stream, options);
             return fileId.toHexString();
         } catch (MongoException e) {
             throw new RuntimeException("Failed to upload file to GridFS", e);
@@ -114,6 +117,18 @@ public class Database {
             return null;
         } catch (MongoException e) {
             throw new RuntimeException("Failed to get filename from GridFS", e);
+        }
+    }
+
+    public String getContentType(String fileId) {
+        try {
+            GridFSFile fileInfo = files.find(new Document("_id", new ObjectId(fileId))).first();
+            if (fileInfo != null && fileInfo.getMetadata() != null) {
+                return fileInfo.getMetadata().getString("contentType");
+            }
+            return null; // Or a default content type like "application/octet-stream"
+        } catch (MongoException e) {
+            throw new RuntimeException("Failed to get contentType from GridFS", e);
         }
     }
 

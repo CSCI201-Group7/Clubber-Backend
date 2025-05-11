@@ -23,8 +23,8 @@ public class FileManager {
         return instance;
     }
 
-    public FileId upload(String filename, InputStream stream) {
-        return new FileId(this.database.upload(filename, stream));
+    public FileId upload(String filename, InputStream stream, String contentType) {
+        return new FileId(this.database.upload(filename, stream, contentType));
     }
 
     public InputStream download(FileId fileId) {
@@ -33,6 +33,10 @@ public class FileManager {
 
     public String getFilename(FileId fileId) {
         return this.database.getFilename(fileId.toString());
+    }
+
+    public String getContentType(FileId fileId) {
+        return this.database.getContentType(fileId.toString());
     }
 
     public void delete(FileId fileId) {

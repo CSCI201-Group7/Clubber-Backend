@@ -22,7 +22,7 @@ public record GetResponse(
                 announcement.organizationId().toString(),
                 announcement.title(),
                 announcement.content(),
-                announcement.attachmentIds().stream().map(Object::toString).toArray(String[]::new),,
+                announcement.attachmentIds().stream().map(Object::toString).toArray(String[]::new),
                 announcement.createdAt().toString(),
                 announcement.updatedAt().toString(),
                 announcement.importance()

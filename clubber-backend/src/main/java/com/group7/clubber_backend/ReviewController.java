@@ -1,5 +1,6 @@
 package com.group7.clubber_backend;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +20,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.clubber_backend.Managers.ReviewManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
@@ -30,9 +34,8 @@ import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Review.Review;
 import com.group7.lib.types.Schemas.ListResponse;
 import com.group7.lib.types.Schemas.PostResponse;
-import com.group7.lib.types.Schemas.Reviews.CreateReviewRequest;
 import com.group7.lib.types.Schemas.Reviews.GetResponse;
-import com.group7.lib.types.Schemas.Reviews.UpdateReviewRequest;
+import com.group7.lib.types.Schemas.Reviews.VoteRequest;
 import com.group7.lib.types.User.User;
 
 @RestController
@@ -42,11 +45,20 @@ public class ReviewController {
     private final ReviewManager reviewManager = ReviewManager.getInstance();
     private final UserManager userManager = UserManager.getInstance();
     private final CredentialProcessor credentialProcessor = CredentialProcessor.getInstance();
+    private final FileManager fileManager = FileManager.getInstance();
 
     @PostMapping
     public PostResponse createReview(
             @RequestHeader("Authorization") String token,
-            @RequestBody CreateReviewRequest request) {
+            @RequestParam("organizationId") String organizationIdStr,
+            @RequestParam("title") String title,
+            @RequestParam("content") String content,
+            @RequestParam("communityRating") int communityRating,
+            @RequestParam("activitiesRating") int activitiesRating,
+            @RequestParam("leadershipRating") int leadershipRating,
+            @RequestParam("inclusivityRating") int inclusivityRating,
+            @RequestParam("overallRating") int overallRating,
+            @RequestParam("attachments") List<MultipartFile> attachments) {
         if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -62,36 +74,42 @@ public class ReviewController {
 
         OrganizationId organizationId;
         try {
-            organizationId = new OrganizationId(request.organizationId());
+            organizationId = new OrganizationId(organizationIdStr);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid organization ID format");
         }
 
-        if (request.rating() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rating details are required");
-        }
-        if (request.rating().overall() < 1 || request.rating().overall() > 5) {
+        if (overallRating < 1 || overallRating > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
         }
 
-        Review.Rating rating = new Review.Rating(
-                request.rating().overall(),
-                request.rating().community(),
-                request.rating().activities(),
-                request.rating().leadership(),
-                request.rating().inclusivity()
-        );
+        List<FileId> fileIds = new ArrayList<>();
+        for (MultipartFile attachment : attachments) {
+            try {
+                FileId fileId = (FileId) fileManager.upload(
+                        attachment.getOriginalFilename(),
+                        attachment.getInputStream(),
+                        attachment.getContentType());
+                fileIds.add(fileId);
+            } catch (IOException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload attachment");
+            }
+        }
 
-        List<FileId> fileIds = request.fileIds() != null
-                ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
-                : Collections.emptyList();
+        Review.Rating rating = new Review.Rating(
+                overallRating,
+                communityRating,
+                activitiesRating,
+                leadershipRating,
+                inclusivityRating
+        );
 
         Review newReview = new Review(
                 null,
                 authorUserId,
                 organizationId,
-                request.title(),
-                request.content(),
+                title,
+                content,
                 rating,
                 fileIds,
                 LocalDateTime.now(),
@@ -153,26 +171,34 @@ public class ReviewController {
         if (userId != null && organizationId != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId and organizationId cannot both be provided");
         }
+        System.out.println("userId: " + userId);
+        System.out.println("organizationId: " + organizationId);
         List<Review> reviews;
         if (userId != null) {
             reviews = reviewManager.search("authorId:" + userId);
         } else {
             reviews = reviewManager.search("organizationId:" + organizationId);
         }
+        System.out.println("reviews: " + reviews);
         return ListResponse.fromList(reviews.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
-    @PutMapping("/{reviewIdStr}")
-    public void updateReview(
+    @PutMapping(value = "/{reviewIdStr}/upvote", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public void upvoteReview(
             @RequestHeader("Authorization") String token,
             @PathVariable String reviewIdStr,
-            @RequestBody UpdateReviewRequest request) {
+            @RequestBody VoteRequest request) {
         if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
         UserId currentUserId = credentialProcessor.verifyToken(token);
         if (currentUserId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
+        }
+
+        User currentUser = userManager.get(currentUserId);
+        if (currentUser == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
         ReviewId reviewObjectId = new ReviewId(reviewIdStr);
@@ -186,44 +212,88 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not the author of this review");
         }
 
-        String title = request.title() != null ? request.title() : existingReview.title();
-        String content = request.content() != null ? request.content() : existingReview.content();
+        ArrayList<UserId> newUpvotes = new ArrayList<>(existingReview.upvotes());
+        ArrayList<UserId> newDownvotes = new ArrayList<>(existingReview.downvotes());
 
-        Review.Rating newRating = existingReview.rating();
-        if (request.rating() != null) {
-            UpdateReviewRequest.RatingDto ratingDto = request.rating();
-            if (ratingDto.overall() != null && (ratingDto.overall() < 1 || ratingDto.overall() > 5)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
-            }
-            newRating = new Review.Rating(
-                    ratingDto.overall() != null ? ratingDto.overall() : existingReview.rating().overall(),
-                    ratingDto.community() != null ? ratingDto.community() : existingReview.rating().community(),
-                    ratingDto.activities() != null ? ratingDto.activities() : existingReview.rating().activities(),
-                    ratingDto.leadership() != null ? ratingDto.leadership() : existingReview.rating().leadership(),
-                    ratingDto.inclusivity() != null ? ratingDto.inclusivity() : existingReview.rating().inclusivity()
-            );
+        if (request.revoke()) {
+            newUpvotes.remove(currentUserId);
+        } else {
+            newUpvotes.add(currentUserId);
         }
-
-        List<FileId> fileIds = request.fileIds() != null
-                ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
-                : existingReview.fileIds();
 
         Review updatedReview = new Review(
                 existingReview.id(),
                 existingReview.authorId(),
                 existingReview.organizationId(),
-                title,
-                content,
-                newRating,
-                fileIds,
+                existingReview.title(),
+                existingReview.content(),
+                existingReview.rating(),
+                existingReview.fileIds(),
                 existingReview.createdAt(),
                 LocalDateTime.now(),
-                existingReview.upvotes(),
-                existingReview.downvotes(),
+                newUpvotes,
+                newDownvotes,
                 existingReview.commentIds()
         );
 
         reviewManager.update(updatedReview);
+    }
+
+    @PutMapping(value = "/{reviewIdStr}/downvote", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public void downvoteReview(
+            @RequestHeader("Authorization") String token,
+            @PathVariable String reviewIdStr,
+            @RequestBody VoteRequest request) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
+        }
+        UserId currentUserId = credentialProcessor.verifyToken(token);
+        if (currentUserId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
+        }
+
+        User currentUser = userManager.get(currentUserId);
+        if (currentUser == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        ReviewId reviewObjectId = new ReviewId(reviewIdStr);
+        Review existingReview = reviewManager.get(reviewObjectId);
+
+        if (existingReview == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
+        }
+
+        if (!existingReview.authorId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not the author of this review");
+        }
+
+        ArrayList<UserId> newUpvotes = new ArrayList<>(existingReview.upvotes());
+        ArrayList<UserId> newDownvotes = new ArrayList<>(existingReview.downvotes());
+
+        if (request.revoke()) {
+            newDownvotes.remove(currentUserId);
+        } else {
+            newDownvotes.add(currentUserId);
+        }
+
+        Review updatedReview = new Review(
+                existingReview.id(),
+                existingReview.authorId(),
+                existingReview.organizationId(),
+                existingReview.title(),
+                existingReview.content(),
+                existingReview.rating(),
+                existingReview.fileIds(),
+                existingReview.createdAt(),
+                LocalDateTime.now(),
+                newUpvotes,
+                newDownvotes,
+                existingReview.commentIds()
+        );
+
+        reviewManager.update(updatedReview);
+
     }
 
     @DeleteMapping("/{reviewIdStr}")

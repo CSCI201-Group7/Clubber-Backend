@@ -476,9 +476,11 @@ public class DocumentConverter {
         // comment.id() is handled by DB.
         doc.put("userId", comment.userId() != null ? comment.userId().toString() : null);
         doc.put("reviewId", comment.reviewId() != null ? comment.reviewId().toString() : null);
+        doc.put("parentCommentId", comment.parentCommentId() != null ? comment.parentCommentId().toString() : null);
         doc.put("text", comment.text());
-        doc.put("createdAt", comment.createdAt() != null ? Date.from(comment.createdAt().toInstant(ZoneOffset.UTC)) : null);
-        doc.put("updatedAt", comment.updatedAt() != null ? Date.from(comment.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("createdAt", comment.createdAt());
+        doc.put("upvotes", idListToStringList(List.of(comment.upvotes())));
+        doc.put("downvotes", idListToStringList(List.of(comment.downvotes())));
         return doc;
     }
 
@@ -502,19 +504,23 @@ public class DocumentConverter {
 
         String text = doc.getString("text");
 
-        Date createdAtDate = doc.getDate("createdAt");
-        LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
+        String parentCommentIdStr = doc.getString("parentCommentId");
+        CommentId parentCommentId = parentCommentIdStr != null ? new CommentId(parentCommentIdStr) : null;
 
-        Date updatedAtDate = doc.getDate("updatedAt");
-        LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
+        List<UserId> upvotes = stringListToIdList(doc.getList("upvotes", String.class, new ArrayList<>()), UserId.class);
+        List<UserId> downvotes = stringListToIdList(doc.getList("downvotes", String.class, new ArrayList<>()), UserId.class);
+
+        String createdAt = doc.getString("createdAt");
 
         return new Comment(
                 commentId,
                 userId,
+                parentCommentId,
                 reviewId,
                 text,
                 createdAt,
-                updatedAt
+                upvotes.toArray(UserId[]::new),
+                downvotes.toArray(UserId[]::new)
         );
     }
 

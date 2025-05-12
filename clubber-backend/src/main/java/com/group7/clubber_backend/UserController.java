@@ -70,7 +70,7 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User registration failed");
         }
         String token = CredentialProcessor.getInstance().createToken(userId.toString());
-        return new PostResponse(token);
+        return new PostResponse(token, userId.toString());
 
     }
 
@@ -86,14 +86,14 @@ public class UserController {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email");
         }
-        System.out.println("User found: " + user.getId().toString());
+        System.out.println("User found: " + user.id().toString());
 
-        if (!Crypto.verify(password, user.getPassword())) {
+        if (!Crypto.verify(password, user.password())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid password");
         }
 
-        String token = CredentialProcessor.getInstance().createToken(user.getId().toString());
-        return new PostResponse(token);
+        String token = CredentialProcessor.getInstance().createToken(user.id().toString());
+        return new PostResponse(token, user.id().toString());
     }
 
     @GetMapping("/{id}")
@@ -115,6 +115,10 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
         }
         User user = UserManager.getInstance().get(userId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
         return new GetResponse(user);
     }
 

@@ -1,17 +1,27 @@
 package com.group7.lib.types.Review;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.group7.lib.types.Ids.CommentId;
+import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
 
 public record Review(
     ReviewId id,
-    UserId userId,
-    OrganizationId organizationId, // The organization being reviewed
-    int rating, // e.g., 1 to 5 stars
-    String text,
+    UserId authorId,
+    OrganizationId organizationId,
+    String title,
+    String content,
+    Rating rating,
+    List<FileId> fileIds,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    List<UserId> upvotes,
+    List<UserId> downvotes,
+    int views,
+    List<CommentId> commentIds,
+    ReviewStatus status
 ) {}

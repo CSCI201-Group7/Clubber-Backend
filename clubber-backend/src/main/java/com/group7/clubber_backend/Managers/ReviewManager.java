@@ -12,6 +12,7 @@ import com.group7.clubber_backend.Managers.base.Manager;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Review.Review; // Assuming Review.java is created
+import com.group7.lib.types.Review.ReviewStatus; // Added import for ReviewStatus
 import com.group7.lib.utilities.Conversion.DocumentConverter; // Assuming DocumentConverter will be updated
 import com.group7.lib.utilities.Database.Database;
 import com.group7.lib.utilities.Database.DatabaseCollection; // Assuming REVIEW will be added to DatabaseCollection
@@ -185,9 +186,11 @@ public class ReviewManager extends Manager<Review> {
 
         logger.log("Searching for reviews with " + field + " = " + value, LogLevel.INFO);
 
-        // Consider type conversion if searching non-string fields (e.g., rating)
+        // Consider type conversion if searching non-string fields
         Object searchValue = value;
-        if (field.equals("rating")) { // Example: convert rating to integer
+        /*
+        // Commenting out old rating search logic as 'rating' is now a complex object
+        if (field.equals("rating")) { 
             try {
                 searchValue = Integer.valueOf(value);
             } catch (NumberFormatException e) {
@@ -195,7 +198,17 @@ public class ReviewManager extends Manager<Review> {
                 return new ArrayList<>();
             }
         }
-        // Add more field-specific conversions if needed (e.g., userId, organizationId)
+        */
+        // Add more field-specific conversions if needed (e.g., userId, organizationId, status)
+        // For searching by status, you might want to convert the string value to the ReviewStatus enum
+        if (field.equals("status")) {
+            try {
+                searchValue = ReviewStatus.valueOf(value.toUpperCase()).name(); // Search by enum name string
+            } catch (IllegalArgumentException e) {
+                logger.log("Invalid status value for search: " + value, LogLevel.WARNING);
+                return new ArrayList<>();
+            }
+        }
 
         Document searchQuery = new Document(field, searchValue);
         List<Document> docs = database.list(COLLECTION, searchQuery);

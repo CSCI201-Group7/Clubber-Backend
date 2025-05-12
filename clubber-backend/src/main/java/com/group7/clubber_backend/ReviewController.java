@@ -1,7 +1,11 @@
 package com.group7.clubber_backend;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -9,120 +13,166 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestHeader; // Assuming schema package
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.group7.clubber_backend.Managers.ReviewManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
+import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
+import com.group7.lib.types.Review.Rating;
 import com.group7.lib.types.Review.Review;
+import com.group7.lib.types.Review.ReviewStatus;
+import com.group7.lib.types.Schemas.Reviews.CreateReviewRequest;
 import com.group7.lib.types.Schemas.Reviews.DeleteResponse;
 import com.group7.lib.types.Schemas.Reviews.GetAllResponse;
 import com.group7.lib.types.Schemas.Reviews.GetByOrganizationResponse;
 import com.group7.lib.types.Schemas.Reviews.GetResponse;
 import com.group7.lib.types.Schemas.Reviews.PostResponse;
 import com.group7.lib.types.Schemas.Reviews.PutResponse;
+import com.group7.lib.types.Schemas.Reviews.UpdateReviewRequest;
 import com.group7.lib.types.User.User;
 
 @RestController
-@RequestMapping("/reviews") // Base path for all review-related endpoints
+@RequestMapping("/reviews")
 public class ReviewController {
 
     private final ReviewManager reviewManager = ReviewManager.getInstance();
     private final UserManager userManager = UserManager.getInstance();
     private final CredentialProcessor credentialProcessor = CredentialProcessor.getInstance();
 
-    // Create a new review for an organization
     @PostMapping
-    public PostResponse createReview(@RequestHeader("Authorization") String token,
-                                     @RequestParam("organizationId") String organizationIdStr,
-                                     @RequestParam("rating") int rating,
-                                     @RequestParam("text") String text) {
-        if (token == null) {
+    public PostResponse createReview(
+            @RequestHeader("Authorization") String token,
+            @RequestBody CreateReviewRequest request) {
+        if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
         UserId authorUserId = credentialProcessor.verifyToken(token);
         if (authorUserId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
-        User author = userManager.get(authorUserId);
-        if (author == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: User not found");
+
+        User authorUser = userManager.get(authorUserId);
+        if (authorUser == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
         OrganizationId organizationId;
         try {
-            organizationId = new OrganizationId(organizationIdStr);
+            organizationId = new OrganizationId(request.organizationId());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid organization ID format");
         }
 
-        // Basic validation for rating
-        if (rating < 1 || rating > 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rating must be between 1 and 5");
+        if (request.rating() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rating details are required");
+        }
+        if (request.rating().overall() < 1 || request.rating().overall() > 5) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
+        }
+
+        Rating rating = new Rating(
+                request.rating().overall(),
+                request.rating().community(),
+                request.rating().activities(),
+                request.rating().leadership(),
+                request.rating().inclusivity()
+        );
+
+        List<FileId> fileIds = request.fileIds() != null
+                ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
+                : Collections.emptyList();
+
+        ReviewStatus status;
+        try {
+            status = request.status() != null ? ReviewStatus.valueOf(request.status().toUpperCase()) : ReviewStatus.DRAFT;
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid review status value");
         }
 
         Review newReview = new Review(
-                null, // ID will be generated by the manager
+                null,
                 authorUserId,
                 organizationId,
+                request.title(),
+                request.content(),
                 rating,
-                text,
+                fileIds,
                 LocalDateTime.now(),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                0,
+                Collections.emptyList(),
+                status
         );
 
         ReviewId reviewId = (ReviewId) reviewManager.create(newReview);
         if (reviewId == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create review");
         }
-        return new PostResponse(reviewId, "Review created successfully"); // Assuming PostResponse schema
+
+        // Update user's reviewIds
+        ReviewId[] reviewIds = authorUser.reviewIds();
+        List<ReviewId> reviewIdList = new ArrayList<>(Arrays.asList(reviewIds));
+        reviewIdList.add(reviewId);
+        User updatedUser = new User(
+                authorUser.id(),
+                authorUser.username(),
+                authorUser.name(),
+                authorUser.email(),
+                authorUser.password(),
+                authorUser.year(),
+                reviewIdList.toArray(ReviewId[]::new),
+                authorUser.commentIds(),
+                authorUser.contactIds(),
+                authorUser.profileImageId(),
+                authorUser.bio()
+        );
+        userManager.update(updatedUser);
+        return new PostResponse(reviewId, "Review created successfully");
     }
 
-    // Get a specific review by its ID
     @GetMapping("/{reviewId}")
     public GetResponse getReviewById(@PathVariable String reviewId) {
         Review review = reviewManager.get(new ReviewId(reviewId));
         if (review == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
         }
-        return new GetResponse(review); // Assuming GetResponse schema
+        return new GetResponse(review);
     }
 
-    // Get all reviews (potentially paginated in a real application)
     @GetMapping
     public GetAllResponse getAllReviews() {
         List<Review> reviews = reviewManager.getAll();
-        return new GetAllResponse(reviews); // Assuming GetAllResponse schema
+        return new GetAllResponse(reviews);
     }
 
-    // Get all reviews for a specific organization
-    @GetMapping("/organization/{organizationId}")
+    @GetMapping("/users/{userId}")
+    public GetAllResponse getReviewsByUser(@PathVariable String userId) {
+        List<Review> reviews = reviewManager.search("authorId:" + userId);
+        return new GetAllResponse(reviews);
+    }
+
+    @GetMapping("/organizations/{organizationId}")
     public GetByOrganizationResponse getReviewsByOrganization(@PathVariable String organizationId) {
-        // This requires a new search method in ReviewManager, e.g., search("organizationId:" + organizationId)
-        // Or a dedicated method like findByOrganizationId(new OrganizationId(organizationId))
         List<Review> reviews = reviewManager.search("organizationId:" + organizationId);
-        if (reviews.isEmpty()) {
-            // Distinguish between no reviews and invalid organizationId if OrganizationManager.get(orgId) is null
-            // For simplicity, returning empty list if no reviews found.
-        }
-        return new GetByOrganizationResponse(reviews); // Assuming this schema exists
+        return new GetByOrganizationResponse(reviews.isEmpty() ? new ArrayList<>() : reviews);
     }
 
-    // Update an existing review
-    // Only the author of the review should be able to update it.
     @PutMapping("/{reviewIdStr}")
-    public PutResponse updateReview(@RequestHeader("Authorization") String token,
-                                  @PathVariable String reviewId,
-                                  @RequestParam(value = "rating", required = false) Integer rating,
-                                  @RequestParam(value = "text", required = false) String text) {
-        if (token == null) {
+    public PutResponse updateReview(
+            @RequestHeader("Authorization") String token,
+            @PathVariable String reviewIdStr,
+            @RequestBody UpdateReviewRequest request) {
+        if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
         UserId currentUserId = credentialProcessor.verifyToken(token);
@@ -130,47 +180,74 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        ReviewId reviewIdStr = new ReviewId(reviewId);
-        Review existingReview = reviewManager.get(reviewIdStr);
+        ReviewId reviewObjectId = new ReviewId(reviewIdStr);
+        Review existingReview = reviewManager.get(reviewObjectId);
 
         if (existingReview == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
         }
 
-        // Check if the current user is the author of the review
-        if (!existingReview.userId().equals(currentUserId)) {
+        if (!existingReview.authorId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not the author of this review");
         }
 
-        // Create the updated review object
-        // Only update fields if new values are provided
-        int newRating = (rating != null) ? rating : existingReview.rating();
-        String newText = (text != null) ? text : existingReview.text();
+        String title = request.title() != null ? request.title() : existingReview.title();
+        String content = request.content() != null ? request.content() : existingReview.content();
 
-        if (rating != null && (rating < 1 || rating > 5)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rating must be between 1 and 5");
+        Rating newRating = existingReview.rating();
+        if (request.rating() != null) {
+            UpdateReviewRequest.RatingDto ratingDto = request.rating();
+            if (ratingDto.overall() != null && (ratingDto.overall() < 1 || ratingDto.overall() > 5)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
+            }
+            newRating = new Rating(
+                    ratingDto.overall() != null ? ratingDto.overall() : existingReview.rating().overall(),
+                    ratingDto.community() != null ? ratingDto.community() : existingReview.rating().community(),
+                    ratingDto.activities() != null ? ratingDto.activities() : existingReview.rating().activities(),
+                    ratingDto.leadership() != null ? ratingDto.leadership() : existingReview.rating().leadership(),
+                    ratingDto.inclusivity() != null ? ratingDto.inclusivity() : existingReview.rating().inclusivity()
+            );
+        }
+
+        List<FileId> fileIds = request.fileIds() != null
+                ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
+                : existingReview.fileIds();
+
+        ReviewStatus status = existingReview.status();
+        if (request.status() != null) {
+            try {
+                status = ReviewStatus.valueOf(request.status().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid review status value");
+            }
         }
 
         Review updatedReview = new Review(
                 existingReview.id(),
-                existingReview.userId(),
+                existingReview.authorId(),
                 existingReview.organizationId(),
+                title,
+                content,
                 newRating,
-                newText,
+                fileIds,
                 existingReview.createdAt(),
-                LocalDateTime.now() // Update the updatedAt timestamp
+                LocalDateTime.now(),
+                existingReview.upvotes(),
+                existingReview.downvotes(),
+                existingReview.views(),
+                existingReview.commentIds(),
+                status
         );
 
         reviewManager.update(updatedReview);
-        return new PutResponse(updatedReview, "Review updated successfully"); // Assuming PutResponse schema
+        return new PutResponse(updatedReview, "Review updated successfully");
     }
 
-    // Delete a review
-    // Only the author or an admin should be able to delete it.
-    @DeleteMapping("/{reviewId}")
-    public DeleteResponse deleteReview(@RequestHeader("Authorization") String token,
-                                       @PathVariable String reviewId) {
-        if (token == null) {
+    @DeleteMapping("/{reviewIdStr}")
+    public DeleteResponse deleteReview(
+            @RequestHeader("Authorization") String token,
+            @PathVariable String reviewIdStr) {
+        if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
         UserId currentUserId = credentialProcessor.verifyToken(token);
@@ -178,20 +255,18 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        ReviewId reviewIdStr = new ReviewId(reviewId);
-        Review reviewToDelete = reviewManager.get(reviewIdStr);
+        ReviewId reviewObjectId = new ReviewId(reviewIdStr);
+        Review reviewToDelete = reviewManager.get(reviewObjectId);
 
         if (reviewToDelete == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
         }
 
-        // Authorization: Check if current user is the author. 
-        // Add admin check if necessary: userManager.get(currentUserId).isAdmin()
-        if (!reviewToDelete.userId().equals(currentUserId)) {
+        if (!reviewToDelete.authorId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not authorized to delete this review");
         }
 
-        reviewManager.delete(reviewIdStr);
-        return new DeleteResponse("Review deleted successfully"); // Assuming DeleteResponse schema
+        reviewManager.delete(reviewObjectId);
+        return new DeleteResponse("Review deleted successfully");
     }
-} 
+}

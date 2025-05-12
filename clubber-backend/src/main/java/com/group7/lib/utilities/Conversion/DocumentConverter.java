@@ -29,7 +29,9 @@ import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Organization.OrganizationLinks;
 import com.group7.lib.types.Organization.OrganizationType;
 import com.group7.lib.types.Organization.RecruitingStatus;
+import com.group7.lib.types.Review.Rating;
 import com.group7.lib.types.Review.Review;
+import com.group7.lib.types.Review.ReviewStatus;
 import com.group7.lib.types.User.User;
 import com.group7.lib.types.User.Year;
 import com.group7.lib.utilities.Logger.LogLevel;
@@ -114,15 +116,14 @@ public class DocumentConverter {
         // User ID is final, assuming it's set correctly before calling this
         // or handled by DB insertion (_id usually set by DB driver)
         // doc.put("_id", new ObjectId(user.getId().toString())); // Usually not needed here
-        doc.put("username", user.getUsername());
-        doc.put("password", user.getPassword());
-        doc.put("name", user.getName());
-        doc.put("email", user.getEmail());
-        doc.put("year", user.getYear() != null ? user.getYear().name() : null); // Store enum as string
-        doc.put("reviewIds", idArrayToStringList(user.getReviewIds()));
-        doc.put("commentIds", idArrayToStringList(user.getCommentIds()));
-        doc.put("organizationIds", idArrayToStringList(user.getOrganizationIds()));
-        doc.put("contactIds", idArrayToStringList(user.getContactIds()));
+        doc.put("username", user.username());
+        doc.put("password", user.password());
+        doc.put("name", user.name());
+        doc.put("email", user.email());
+        doc.put("year", user.year() != null ? user.year().name() : null); // Store enum as string
+        doc.put("reviewIds", idArrayToStringList(user.reviewIds()));
+        doc.put("commentIds", idArrayToStringList(user.commentIds()));
+        doc.put("contactIds", idArrayToStringList(user.contactIds()));
 
         return doc;
     }
@@ -150,24 +151,27 @@ public class DocumentConverter {
         // Convert lists of strings back to Id arrays
         ReviewId[] reviewIds = stringListToIdArray(doc.getList("reviewIds", String.class, new ArrayList<>()), ReviewId.class);
         CommentId[] commentIds = stringListToIdArray(doc.getList("commentIds", String.class, new ArrayList<>()), CommentId.class);
-        OrganizationId[] organizationIds = stringListToIdArray(doc.getList("organizationIds", String.class, new ArrayList<>()), OrganizationId.class);
         UserId[] contactIds = stringListToIdArray(doc.getList("contactIds", String.class, new ArrayList<>()), UserId.class);
 
-        // Use the User constructor
-        // Note: If Favorites is null due to placeholder, User constructor might fail if it requires non-null.
+        // Use the User record's canonical constructor
         try {
-            User user = new User(username, email, password);
-            user.setId(userId);
-            user.setReviewIds(reviewIds);
-            user.setCommentIds(commentIds);
-            user.setOrganizationIds(organizationIds);
-            user.setContactIds(contactIds);
-            user.setYear(year);
-            user.setName(name);
+            User user = new User(
+                    userId,
+                    username,
+                    name,
+                    email,
+                    password,
+                    year,
+                    reviewIds,
+                    commentIds,
+                    contactIds,
+                    null, // profileImageId
+                    null // bio
+            );
             return user;
         } catch (NullPointerException e) {
-            logger.log("Error constructing User, possibly due to null Favorites placeholder: " + e.getMessage(), LogLevel.ERROR);
-            return null; // Or handle differently
+            logger.log("Error constructing User record. A required field (username, email, or password) might be null. Exception: " + e.getMessage(), LogLevel.ERROR);
+            return null;
         }
     }
 
@@ -362,20 +366,58 @@ public class DocumentConverter {
         );
     }
 
+    // --- Rating Conversion ---
+    public static Document ratingToDocument(Rating rating) {
+        if (rating == null) {
+            return null;
+        }
+        Document doc = new Document();
+        doc.put("overall", rating.overall());
+        doc.put("community", rating.community());
+        doc.put("activities", rating.activities());
+        doc.put("leadership", rating.leadership());
+        doc.put("inclusivity", rating.inclusivity());
+        return doc;
+    }
+
+    public static Rating documentToRating(Document doc) {
+        if (doc == null) {
+            return null;
+        }
+        return new Rating(
+                doc.getInteger("overall", 0), // Default to 0 if missing
+                doc.getInteger("community", 0),
+                doc.getInteger("activities", 0),
+                doc.getInteger("leadership", 0),
+                doc.getInteger("inclusivity", 0)
+        );
+    }
+
     // --- Review Conversion ---
     public static Document reviewToDocument(Review review) {
         if (review == null) {
             return null;
         }
         Document doc = new Document();
-        // review.id() is handled by DB if null, or used for querying if not null.
-        // Not setting _id here to let MongoDB generate it on insert.
-        doc.put("userId", review.userId() != null ? review.userId().toString() : null);
+        // review.id() is usually handled by the database (_id) or set prior to insertion.
+        // If you need to store it explicitly and it's not the MongoDB ObjectId:
+        // if (review.id() != null) {
+        //     doc.put("reviewId_str", review.id().toString());
+        // }
+        doc.put("authorId", review.authorId() != null ? review.authorId().toString() : null);
         doc.put("organizationId", review.organizationId() != null ? review.organizationId().toString() : null);
-        doc.put("rating", review.rating());
-        doc.put("text", review.text());
+        doc.put("title", review.title());
+        doc.put("content", review.content());
+        doc.put("rating", ratingToDocument(review.rating())); // Use new ratingToDocument
+        doc.put("fileIds", idListToStringList(review.fileIds())); // Use existing helper
         doc.put("createdAt", review.createdAt() != null ? Date.from(review.createdAt().toInstant(ZoneOffset.UTC)) : null);
         doc.put("updatedAt", review.updatedAt() != null ? Date.from(review.updatedAt().toInstant(ZoneOffset.UTC)) : null);
+        doc.put("upvotes", idListToStringList(review.upvotes()));
+        doc.put("downvotes", idListToStringList(review.downvotes()));
+        doc.put("views", review.views());
+        doc.put("commentIds", idListToStringList(review.commentIds()));
+        doc.put("status", review.status() != null ? review.status().name() : null); // Store enum name as string
+
         return doc;
     }
 
@@ -387,28 +429,30 @@ public class DocumentConverter {
         ObjectId objectId = doc.getObjectId("_id");
         if (objectId == null) {
             logger.log("Review Document is missing _id field.", LogLevel.ERROR);
-            return null;
+            // Attempt to get reviewId_str if _id is missing (if you decided to store it separately)
+            // String reviewIdStr = doc.getString("reviewId_str");
+            // if (reviewIdStr == null) {
+            //    logger.log("Review Document is also missing reviewId_str field.", LogLevel.ERROR);
+            //    return null;
+            // }
+            // reviewId = new ReviewId(reviewIdStr);
+            return null; // Strict: _id must be present for conversion
         }
         ReviewId reviewId = new ReviewId(objectId.toHexString());
 
-        String userIdStr = doc.getString("userId");
-        UserId userId = userIdStr != null ? new UserId(userIdStr) : null;
+        String authorIdStr = doc.getString("authorId");
+        UserId authorId = authorIdStr != null ? new UserId(authorIdStr) : null;
 
-        String orgIdStr = doc.getString("organizationId");
-        OrganizationId organizationId = orgIdStr != null ? new OrganizationId(orgIdStr) : null;
+        String organizationIdStr = doc.getString("organizationId");
+        OrganizationId organizationId = organizationIdStr != null ? new OrganizationId(organizationIdStr) : null;
 
-        Integer rating = doc.getInteger("rating");
-        if (rating == null) {
-            // Handle case where rating might be missing or not an integer
-            // For now, let's assume it's critical and log an error or assign a default
-            logger.log("Review Document is missing 'rating' field or it's not an integer.", LogLevel.WARNING);
-            // Depending on requirements, you might return null or throw an exception
-            // For a record, all fields are typically expected.
-            // If a default is not appropriate, returning null might be safer.
-            return null;
-        }
+        String title = doc.getString("title");
+        String content = doc.getString("content");
 
-        String text = doc.getString("text");
+        Document ratingDoc = doc.get("rating", Document.class);
+        Rating rating = documentToRating(ratingDoc); // Use new documentToRating
+
+        List<FileId> fileIds = stringListToIdList(doc.getList("fileIds", String.class, new ArrayList<>()), FileId.class);
 
         Date createdAtDate = doc.getDate("createdAt");
         LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
@@ -416,15 +460,31 @@ public class DocumentConverter {
         Date updatedAtDate = doc.getDate("updatedAt");
         LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
 
+        List<UserId> upvotes = stringListToIdList(doc.getList("upvotes", String.class, new ArrayList<>()), UserId.class);
+        List<UserId> downvotes = stringListToIdList(doc.getList("downvotes", String.class, new ArrayList<>()), UserId.class);
+
+        Integer views = doc.getInteger("views", 0); // Default to 0 if missing
+
+        List<CommentId> commentIds = stringListToIdList(doc.getList("commentIds", String.class, new ArrayList<>()), CommentId.class);
+
+        String statusStr = doc.getString("status");
+        ReviewStatus status = statusStr != null ? ReviewStatus.valueOf(statusStr.toUpperCase()) : null; // Ensure toUpperCase for enum matching if stored differently
+
         return new Review(
                 reviewId,
-                userId,
+                authorId,
                 organizationId,
-                rating, // Safe due to check above
-                text,
+                title,
+                content,
+                rating,
+                fileIds,
                 createdAt,
-                updatedAt
-        );
+                updatedAt,
+                upvotes,
+                downvotes,
+                views,
+                commentIds,
+                status);
     }
 
     // --- Comment Conversion ---

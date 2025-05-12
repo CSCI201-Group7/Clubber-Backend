@@ -47,18 +47,14 @@ public class OrganizationController {
     }
 
     // Get all organizations that the user is a member of
-    @GetMapping
-    public GetAllResponse getMembers(@RequestHeader("Authorization") String token) {
-        UserId userId = CredentialProcessor.getInstance().verifyToken(token);
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token");
-        }
-        User user = UserManager.getInstance().get(userId);
+    @GetMapping("/users/{userId}")
+    public GetAllResponse getMembers(@PathVariable String userId) {
+        User user = UserManager.getInstance().get(new UserId(userId));
         if (user == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        List<Organization> organizations = OrganizationManager.getInstance().search("memberIds:" + user.getId().toString());
+        List<Organization> organizations = OrganizationManager.getInstance().search("memberIds:" + user.id().toString());
 
         return GetAllResponse.fromOrganizations(organizations);
     }
@@ -100,10 +96,10 @@ public class OrganizationController {
 
         // Create lists for member and admin IDs
         List<UserId> memberIds = new ArrayList<>();
-        memberIds.add(user.getId());
+        memberIds.add(user.id());
 
         List<UserId> adminIds = new ArrayList<>();
-        adminIds.add(user.getId());
+        adminIds.add(user.id());
 
         FileId logoId = null;
         if (logo != null && !logo.isEmpty() && logoFilename != null) {

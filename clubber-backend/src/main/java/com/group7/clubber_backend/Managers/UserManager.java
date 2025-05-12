@@ -49,14 +49,14 @@ public class UserManager extends Manager<User> {
             logger.log("Created user with ID: " + newId, LogLevel.INFO);
             return new UserId(newId);
         } else {
-            logger.log("Failed to create user: " + user.getUsername(), LogLevel.ERROR);
+            logger.log("Failed to create user: " + user.username(), LogLevel.ERROR);
             return null;
         }
     }
 
     @Override
     public void update(User user) {
-        if (user == null || user.getId() == null) {
+        if (user == null || user.id() == null) {
             logger.log("Attempted to update user with null object or null ID", LogLevel.WARNING);
             return;
         }
@@ -67,11 +67,11 @@ public class UserManager extends Manager<User> {
         }
         doc.remove("_id");
 
-        boolean success = database.update(COLLECTION, user.getId().toString(), doc);
+        boolean success = database.update(COLLECTION, user.id().toString(), doc);
         if (success) {
-            logger.log("Updated user with ID: " + user.getId().toString(), LogLevel.INFO);
+            logger.log("Updated user with ID: " + user.id().toString(), LogLevel.INFO);
         } else {
-            logger.log("Failed to update user with ID: " + user.getId().toString(), LogLevel.WARNING);
+            logger.log("Failed to update user with ID: " + user.id().toString(), LogLevel.WARNING);
         }
     }
 

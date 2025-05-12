@@ -13,20 +13,22 @@ public record GetResponse(
         String year,
         String[] reviewIds,
         String[] commentIds,
-        String[] organizationIds,
-        String[] contactIds) {
+        String[] contactIds,
+        String profileImageId,
+        String bio) {
 
     public GetResponse(User user) {
         this(
-                user.getId().toString(),
-                user.getUsername(),
-                user.getName(),
-                user.getEmail(),
-                user.getYear() != null ? user.getYear().toString() : null,
-                convertToStringArray(user.getReviewIds()),
-                convertToStringArray(user.getCommentIds()),
-                convertToStringArray(user.getOrganizationIds()),
-                convertToStringArray(user.getContactIds())
+                user.id() != null ? user.id().toString() : null,
+                user.username(),
+                user.name(),
+                user.email(),
+                user.year() != null ? user.year().toString() : null,
+                convertToStringArray(user.reviewIds()),
+                convertToStringArray(user.commentIds()),
+                convertToStringArray(user.contactIds()),
+                user.profileImageId() != null ? user.profileImageId().toString() : null,
+                user.bio()
         );
     }
 

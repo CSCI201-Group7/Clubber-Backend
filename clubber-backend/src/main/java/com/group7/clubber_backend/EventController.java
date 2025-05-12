@@ -1,9 +1,12 @@
 package com.group7.clubber_backend;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,24 +15,25 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.group7.clubber_backend.Managers.EventManager;
+import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.clubber_backend.Managers.OrganizationManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Event.Event;
 import com.group7.lib.types.Ids.EventId;
+import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Organization.Organization;
-import com.group7.lib.types.Schemas.Events.DeleteResponse;
-import com.group7.lib.types.Schemas.Events.GetAllResponse;
-import com.group7.lib.types.Schemas.Events.GetByOrganizationResponse;
 import com.group7.lib.types.Schemas.Events.GetResponse;
-import com.group7.lib.types.Schemas.Events.PostResponse;
-import com.group7.lib.types.Schemas.Events.PutResponse;
+import com.group7.lib.types.Schemas.ListResponse;
+import com.group7.lib.types.Schemas.PostResponse;
 import com.group7.lib.types.User.User;
 
 @RestController
@@ -40,10 +44,19 @@ public class EventController {
     private final UserManager userManager = UserManager.getInstance();
     private final OrganizationManager organizationManager = OrganizationManager.getInstance();
     private final CredentialProcessor credentialProcessor = CredentialProcessor.getInstance();
+    private final FileManager fileManager = FileManager.getInstance();
 
-    @PostMapping
-    public PostResponse createEvent(@RequestHeader("Authorization") String token,
-            @RequestBody Event newEventDetails) {
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public PostResponse createEvent(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("organizationId") String organizationId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("location") String location,
+            @RequestParam("startTime") String startTime,
+            @RequestParam("endTime") String endTime,
+            @RequestParam("rsvpLink") String rsvpLink,
+            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments) {
         UserId authorUserId = credentialProcessor.verifyToken(token);
         if (authorUserId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
@@ -54,7 +67,7 @@ public class EventController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: User not found");
         }
 
-        Organization organization = organizationManager.get(newEventDetails.organizationId());
+        Organization organization = organizationManager.get(new OrganizationId(organizationId));
         if (organization == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found");
         }
@@ -63,18 +76,32 @@ public class EventController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: User is not an admin of this organization");
         }
 
+        List<FileId> attachmentIds = new ArrayList<>();
+        if (attachments != null && attachments.length > 0) {
+            for (MultipartFile attachment : attachments) {
+                try {
+                    FileId attachmentId = (FileId) fileManager.upload(
+                            attachment.getOriginalFilename(),
+                            attachment.getInputStream(),
+                            attachment.getContentType());
+                    attachmentIds.add(attachmentId);
+                } catch (IOException e) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload attachment");
+                }
+            }
+        }
+
         Event eventToCreate = new Event(
                 new EventId(null), // ID will be generated by the manager
-                newEventDetails.organizationId(),
-                newEventDetails.title(),
-                newEventDetails.description(),
-                newEventDetails.location(),
-                newEventDetails.startTime(),
-                newEventDetails.endTime(),
-                newEventDetails.rsvpLink(),
-                newEventDetails.attachmentIds()
+                new OrganizationId(organizationId),
+                title,
+                description,
+                location,
+                startTime,
+                endTime,
+                rsvpLink,
+                attachmentIds
         );
-
         EventId eventId = (EventId) eventManager.create(eventToCreate);
         if (eventId == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create event");
@@ -101,7 +128,7 @@ public class EventController {
         );
         organizationManager.update(updatedOrganization);
 
-        return new PostResponse(eventId, "Event created successfully");
+        return new PostResponse(eventId);
     }
 
     @GetMapping("/{eventId}")
@@ -113,20 +140,17 @@ public class EventController {
         return new GetResponse(event);
     }
 
-    @GetMapping
-    public GetAllResponse getAllEvents() {
+    @GetMapping("/all")
+    public ListResponse<GetResponse> getAllEvents() {
         List<Event> events = eventManager.getAll();
-        return new GetAllResponse(events);
+        return ListResponse.fromList(events.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
-    @GetMapping("/organization/{organizationIdStr}")
-    public GetByOrganizationResponse getEventsByOrganization(@PathVariable String organizationIdStr) {
-        OrganizationId organizationId;
-        try {
-            organizationId = new OrganizationId(organizationIdStr);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid organization ID format");
-        }
+    @GetMapping
+    public ListResponse<GetResponse> getEventsByOrganization(
+            @RequestParam("organizationId") String organizationIdStr
+    ) {
+        OrganizationId organizationId = new OrganizationId(organizationIdStr);
 
         Organization organization = organizationManager.get(organizationId);
         if (organization == null) {
@@ -143,11 +167,11 @@ public class EventController {
                 events = eventManager.list(eventIdsToFetch);
             }
         }
-        return new GetByOrganizationResponse(events);
+        return ListResponse.fromList(events.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
     @PutMapping("/{eventIdStr}")
-    public PutResponse updateEvent(@RequestHeader("Authorization") String token,
+    public void updateEvent(@RequestHeader("Authorization") String token,
             @PathVariable String eventIdStr,
             @RequestBody Event updatedEventDetails) {
         UserId currentUserId = credentialProcessor.verifyToken(token);
@@ -186,11 +210,10 @@ public class EventController {
         );
 
         eventManager.update(eventToUpdate);
-        return new PutResponse(eventToUpdate, "Event updated successfully");
     }
 
     @DeleteMapping("/{eventIdStr}")
-    public DeleteResponse deleteEvent(@RequestHeader("Authorization") String token,
+    public void deleteEvent(@RequestHeader("Authorization") String token,
             @PathVariable String eventIdStr) {
         UserId currentUserId = credentialProcessor.verifyToken(token);
         if (currentUserId == null) {
@@ -237,7 +260,5 @@ public class EventController {
                 organization.announcementIds()
         );
         organizationManager.update(updatedOrganization);
-
-        return new DeleteResponse("Event deleted successfully");
     }
 }

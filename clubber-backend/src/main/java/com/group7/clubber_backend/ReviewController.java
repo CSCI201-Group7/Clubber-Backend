@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,10 +28,10 @@ import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Review.Review;
+import com.group7.lib.types.Schemas.ListResponse;
+import com.group7.lib.types.Schemas.PostResponse;
 import com.group7.lib.types.Schemas.Reviews.CreateReviewRequest;
 import com.group7.lib.types.Schemas.Reviews.GetResponse;
-import com.group7.lib.types.Schemas.Reviews.ListResponse;
-import com.group7.lib.types.Schemas.Reviews.PostResponse;
 import com.group7.lib.types.Schemas.Reviews.UpdateReviewRequest;
 import com.group7.lib.types.User.User;
 
@@ -135,22 +136,30 @@ public class ReviewController {
         return new GetResponse(review);
     }
 
-    @GetMapping
-    public ListResponse getAllReviews() {
+    @GetMapping("/all")
+    public ListResponse<GetResponse> getAllReviews() {
         List<Review> reviews = reviewManager.getAll();
-        return ListResponse.fromReviews(reviews);
+        return ListResponse.fromList(reviews.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
-    @GetMapping("/users/{userId}")
-    public ListResponse getReviewsByUser(@PathVariable String userId) {
-        List<Review> reviews = reviewManager.search("authorId:" + userId);
-        return ListResponse.fromReviews(reviews);
-    }
-
-    @GetMapping("/organizations/{organizationId}")
-    public ListResponse getReviewsByOrganization(@PathVariable String organizationId) {
-        List<Review> reviews = reviewManager.search("organizationId:" + organizationId);
-        return ListResponse.fromReviews(reviews);
+    @GetMapping
+    public ListResponse<GetResponse> getReviewsByUser(
+            @RequestParam(value = "userId", required = false) String userId,
+            @RequestParam(value = "organizationId", required = false) String organizationId
+    ) {
+        if (userId == null && organizationId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId or organizationId is required");
+        }
+        if (userId != null && organizationId != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId and organizationId cannot both be provided");
+        }
+        List<Review> reviews;
+        if (userId != null) {
+            reviews = reviewManager.search("authorId:" + userId);
+        } else {
+            reviews = reviewManager.search("organizationId:" + organizationId);
+        }
+        return ListResponse.fromList(reviews.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
     @PutMapping("/{reviewIdStr}")

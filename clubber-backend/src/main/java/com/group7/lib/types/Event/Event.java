@@ -1,6 +1,5 @@
 package com.group7.lib.types.Event;
 
-import java.util.Date;
 import java.util.List;
 
 import com.group7.lib.types.Ids.EventId;
@@ -13,8 +12,8 @@ public record Event(
         String title,
         String description,
         String location,
-        Date startTime,
-        Date endTime,
+        String startTime,
+        String endTime,
         String rsvpLink,
         List<FileId> attachmentIds
         ) {

@@ -14,7 +14,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.group7.lib.types.Announcement.Announcement;
-import com.group7.lib.types.Announcement.AnnouncementImportance;
 import com.group7.lib.types.Comment.Comment;
 import com.group7.lib.types.Event.Event;
 import com.group7.lib.types.Ids.AnnouncementId;
@@ -290,9 +289,8 @@ public class DocumentConverter {
         doc.put("title", announcement.title());
         doc.put("content", announcement.content());
         doc.put("attachmentIds", idListToStringList(announcement.attachmentIds()));
-        doc.put("createdAt", announcement.createdAt() != null ? Date.from(announcement.createdAt().toInstant(ZoneOffset.UTC)) : null);
-        doc.put("updatedAt", announcement.updatedAt() != null ? Date.from(announcement.updatedAt().toInstant(ZoneOffset.UTC)) : null);
-        doc.put("importance", announcement.importance() != null ? announcement.importance().name() : null);
+        doc.put("createdAt", announcement.createdAt());
+        doc.put("updatedAt", announcement.updatedAt());
         return doc;
     }
 
@@ -342,14 +340,8 @@ public class DocumentConverter {
 
         List<FileId> attachmentIds = stringListToIdList(stringAttachmentIds, FileId.class);
 
-        Date createdAtDate = doc.getDate("createdAt");
-        LocalDateTime createdAt = createdAtDate != null ? LocalDateTime.ofInstant(createdAtDate.toInstant(), ZoneOffset.UTC) : null;
-
-        Date updatedAtDate = doc.getDate("updatedAt");
-        LocalDateTime updatedAt = updatedAtDate != null ? LocalDateTime.ofInstant(updatedAtDate.toInstant(), ZoneOffset.UTC) : null;
-
-        String importanceStr = doc.getString("importance");
-        AnnouncementImportance importance = importanceStr != null ? AnnouncementImportance.valueOf(importanceStr) : null;
+        String createdAt = doc.getString("createdAt");
+        String updatedAt = doc.getString("updatedAt");
 
         return new Announcement(
                 announcementId,
@@ -359,8 +351,7 @@ public class DocumentConverter {
                 content,
                 attachmentIds,
                 createdAt,
-                updatedAt,
-                importance
+                updatedAt
         );
     }
 
@@ -570,8 +561,8 @@ public class DocumentConverter {
         String description = doc.getString("description");
         String location = doc.getString("location");
 
-        Date startTime = doc.getDate("startTime"); // Retrieve as java.util.Date
-        Date endTime = doc.getDate("endTime");     // Retrieve as java.util.Date
+        String startTime = doc.getString("startTime");
+        String endTime = doc.getString("endTime");
 
         String rsvpLink = doc.getString("rsvpLink");
 

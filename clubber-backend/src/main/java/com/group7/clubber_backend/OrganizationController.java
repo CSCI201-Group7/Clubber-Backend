@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,9 +29,9 @@ import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Organization.OrganizationLinks;
 import com.group7.lib.types.Organization.OrganizationType;
 import com.group7.lib.types.Organization.RecruitingStatus;
-import com.group7.lib.types.Schemas.Organizations.GetAllResponse;
+import com.group7.lib.types.Schemas.ListResponse;
 import com.group7.lib.types.Schemas.Organizations.GetResponse;
-import com.group7.lib.types.Schemas.Organizations.PostResponse;
+import com.group7.lib.types.Schemas.PostResponse;
 import com.group7.lib.types.User.User;
 
 @RestController
@@ -47,22 +48,23 @@ public class OrganizationController {
     }
 
     // Get all organizations that the user is a member of
-    @GetMapping("/users/{userId}")
-    public GetAllResponse getMembers(@PathVariable String userId) {
+    @GetMapping
+    public ListResponse<GetResponse> getMembers(
+            @RequestParam("userId") String userId
+    ) {
         User user = UserManager.getInstance().get(new UserId(userId));
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        List<Organization> organizations = OrganizationManager.getInstance().search("memberIds:" + user.id().toString());
-
-        return GetAllResponse.fromOrganizations(organizations);
+        List<Organization> organizations = OrganizationManager.getInstance().search("memberIds:" + userId);
+        return ListResponse.fromList(organizations.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
     @GetMapping("/all")
-    public GetAllResponse getAll() {
+    public ListResponse<GetResponse> getAll() {
         List<Organization> organizations = OrganizationManager.getInstance().getAll();
-        return GetAllResponse.fromOrganizations(organizations);
+        return ListResponse.fromList(organizations.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,15 +25,14 @@ import com.group7.clubber_backend.Managers.OrganizationManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
 import com.group7.lib.types.Announcement.Announcement;
-import com.group7.lib.types.Announcement.AnnouncementImportance;
 import com.group7.lib.types.Ids.AnnouncementId;
 import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Schemas.Announcements.GetResponse;
-import com.group7.lib.types.Schemas.Announcements.ListResponse;
-import com.group7.lib.types.Schemas.Announcements.PostResponse;
+import com.group7.lib.types.Schemas.ListResponse;
+import com.group7.lib.types.Schemas.PostResponse;
 import com.group7.lib.types.User.User;
 
 @RestController
@@ -51,8 +51,7 @@ public class AnnouncementController {
             @RequestParam("organizationId") String organizationIdStr,
             @RequestParam("title") String title,
             @RequestParam("content") String content,
-            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments,
-            @RequestParam(value = "importance", required = false) AnnouncementImportance importance) {
+            @RequestParam(value = "attachments", required = false) MultipartFile[] attachments) {
 
         UserId authorId = credentialProcessor.verifyToken(token);
         if (authorId == null) {
@@ -107,9 +106,9 @@ public class AnnouncementController {
                 title,
                 content,
                 attachmentIds,
-                now,
-                now,
-                importance != null ? importance : AnnouncementImportance.Normal
+                // To ISO 8601
+                now.toString(),
+                now.toString()
         );
 
         AnnouncementId newAnnouncementId = (AnnouncementId) announcementManager.create(newAnnouncement);
@@ -151,18 +150,17 @@ public class AnnouncementController {
         return new GetResponse(announcement);
     }
 
-    @GetMapping("/organizations/{organizationId}")
-    public ListResponse getAnnouncementsByOrganizationId(@PathVariable String organizationId) {
+    @GetMapping
+    public ListResponse<GetResponse> getAnnouncementsByOrganizationId(
+            @RequestParam("organizationId") String organizationId
+    ) {
         OrganizationId orgId = new OrganizationId(organizationId);
         Organization organization = organizationManager.get(orgId);
         if (organization == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found");
         }
-        List<AnnouncementId> announcementIds = new ArrayList<>(organization.announcementIds() != null ? organization.announcementIds() : new ArrayList<>());
-        if (announcementIds.isEmpty()) {
-            return new ListResponse(new ArrayList<>());
-        }
-        List<Announcement> announcements = announcementManager.list(announcementIds.toArray(AnnouncementId[]::new));
-        return ListResponse.fromAnnouncements(announcements);
+
+        List<Announcement> announcements = announcementManager.search("organizationId:" + organizationId);
+        return ListResponse.fromList(announcements.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 }

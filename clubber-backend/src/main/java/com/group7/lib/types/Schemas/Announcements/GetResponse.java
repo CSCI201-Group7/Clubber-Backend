@@ -1,7 +1,6 @@
 package com.group7.lib.types.Schemas.Announcements;
 
 import com.group7.lib.types.Announcement.Announcement;
-import com.group7.lib.types.Announcement.AnnouncementImportance;
 
 public record GetResponse(
         String id,
@@ -11,8 +10,7 @@ public record GetResponse(
         String content,
         String[] attachmentIds,
         String createdAt,
-        String updatedAt,
-        AnnouncementImportance importance
+        String updatedAt
         ) {
 
     public GetResponse(Announcement announcement) {
@@ -26,8 +24,7 @@ public record GetResponse(
                 ? announcement.attachmentIds().stream()
                         .map(id -> id.toString()).toArray(String[]::new) : null,
                 announcement.createdAt().toString(),
-                announcement.updatedAt().toString(),
-                announcement.importance()
+                announcement.updatedAt().toString()
         );
     }
 }

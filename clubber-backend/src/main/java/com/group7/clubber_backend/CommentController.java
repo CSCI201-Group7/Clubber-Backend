@@ -24,15 +24,13 @@ import com.group7.lib.types.Ids.CommentId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Review.Review;
-import com.group7.lib.types.Schemas.Comments.DeleteResponse;
-import com.group7.lib.types.Schemas.Comments.GetAllByReviewResponse;
 import com.group7.lib.types.Schemas.Comments.GetResponse;
+import com.group7.lib.types.Schemas.Comments.ListResponse;
 import com.group7.lib.types.Schemas.Comments.PostResponse;
-import com.group7.lib.types.Schemas.Comments.PutResponse;
 import com.group7.lib.types.User.User;
 
 @RestController
-@RequestMapping("/reviews/{reviewId}/comments") // Nested under reviews
+@RequestMapping("/comments") // Nested under reviews
 public class CommentController {
 
     private final CommentManager commentManager = CommentManager.getInstance();
@@ -43,7 +41,7 @@ public class CommentController {
     // Create a new comment on a review
     @PostMapping
     public PostResponse createComment(@RequestHeader("Authorization") String token,
-            @PathVariable String reviewId,
+            @RequestParam("reviewId") String reviewId,
             @RequestParam("text") String text) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
@@ -83,46 +81,44 @@ public class CommentController {
         if (commentId == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create comment");
         }
-        return new PostResponse(commentId, "Comment created successfully"); // Assuming PostResponse schema
+        return new PostResponse(commentId);
     }
 
-    // Get a specific comment by its ID (though usually comments are fetched via review)
-    @GetMapping("/{commentId}")
-    public GetResponse getCommentById(@PathVariable String reviewId, @PathVariable String commentId) {
-        // Validate reviewId path consistency if necessary, or just use commentId if globally unique
-        CommentId commentIdStr = new CommentId(commentId);
-        Comment comment = commentManager.get(commentIdStr);
+    // Get a specific comment by its ID
+    @GetMapping("/{commentIdStr}")
+    public GetResponse getCommentById(@PathVariable String commentIdStr) {
+        CommentId commentId = new CommentId(commentIdStr);
+        Comment comment = commentManager.get(commentId);
 
         if (comment == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
         }
-        // Optional: Check if comment.reviewId() matches reviewIdStr for consistency
-        if (!comment.reviewId().toString().equals(reviewId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to this review");
-        }
 
-        return new GetResponse(comment); // Assuming GetResponse schema
+        return new GetResponse(comment);
     }
 
     // Get all comments for a specific review
-    @GetMapping
-    public GetAllByReviewResponse getCommentsByReview(@PathVariable String reviewId) {
-        ReviewId reviewIdStr = new ReviewId(reviewId);
-        // Check if the review exists
-        if (reviewManager.get(reviewIdStr) == null) {
+    @GetMapping("/reviews/{reviewIdStr}")
+    public ListResponse getCommentsByReview(@PathVariable String reviewIdStr) {
+        ReviewId reviewId = new ReviewId(reviewIdStr);
+        if (reviewManager.get(reviewId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found");
         }
-        // This requires a new search method in CommentManager, e.g., search("reviewId:" + reviewIdStr)
-        // Or a dedicated method like findByReviewId(new ReviewId(reviewIdStr))
         List<Comment> comments = commentManager.search("reviewId:" + reviewId);
-        return new GetAllByReviewResponse(comments); // Assuming this schema exists
+        return ListResponse.fromComments(comments);
+    }
+
+    @GetMapping("/users/{userIdStr}")
+    public ListResponse getCommentsByUser(@PathVariable String userIdStr) {
+        UserId userId = new UserId(userIdStr);
+        List<Comment> comments = commentManager.search("userId:" + userId);
+        return ListResponse.fromComments(comments);
     }
 
     // Update an existing comment
-    @PutMapping("/{commentId}")
-    public PutResponse updateComment(@RequestHeader("Authorization") String token,
-            @PathVariable String reviewId,
-            @PathVariable String commentId,
+    @PutMapping("/{commentIdStr}")
+    public void updateComment(@RequestHeader("Authorization") String token,
+            @PathVariable String commentIdStr,
             @RequestParam("text") String text) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
@@ -132,16 +128,11 @@ public class CommentController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        CommentId commentIdStr = new CommentId(commentId);
-        Comment existingComment = commentManager.get(commentIdStr);
+        CommentId commentId = new CommentId(commentIdStr);
+        Comment existingComment = commentManager.get(commentId);
 
         if (existingComment == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
-        }
-
-        // Check if the comment belongs to the specified review
-        if (!existingComment.reviewId().toString().equals(reviewId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to this review");
         }
 
         // Check if the current user is the author of the comment
@@ -159,14 +150,12 @@ public class CommentController {
         );
 
         commentManager.update(updatedComment);
-        return new PutResponse(updatedComment, "Comment updated successfully"); // Assuming PutResponse schema
     }
 
     // Delete a comment
-    @DeleteMapping("/{commentId}")
-    public DeleteResponse deleteComment(@RequestHeader("Authorization") String token,
-            @PathVariable String reviewId,
-            @PathVariable String commentId) {
+    @DeleteMapping("/{commentIdStr}")
+    public void deleteComment(@RequestHeader("Authorization") String token,
+            @PathVariable String commentIdStr) {
         if (token == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -175,16 +164,11 @@ public class CommentController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Invalid or expired token");
         }
 
-        CommentId commentIdStr = new CommentId(commentId);
-        Comment commentToDelete = commentManager.get(commentIdStr);
+        CommentId commentId = new CommentId(commentIdStr);
+        Comment commentToDelete = commentManager.get(commentId);
 
         if (commentToDelete == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
-        }
-
-        // Check if the comment belongs to the specified review
-        if (!commentToDelete.reviewId().toString().equals(reviewId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment does not belong to this review");
         }
 
         // Authorization: Check if current user is the author. 
@@ -193,7 +177,6 @@ public class CommentController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: You are not authorized to delete this comment");
         }
 
-        commentManager.delete(commentIdStr);
-        return new DeleteResponse("Comment deleted successfully"); // Assuming DeleteResponse schema
+        commentManager.delete(commentId);
     }
 }

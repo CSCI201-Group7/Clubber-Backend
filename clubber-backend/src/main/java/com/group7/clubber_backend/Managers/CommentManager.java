@@ -9,12 +9,12 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.group7.clubber_backend.Managers.base.Manager;
+import com.group7.lib.types.Comment.Comment;
 import com.group7.lib.types.Ids.CommentId;
 import com.group7.lib.types.Ids.base.Id;
-import com.group7.lib.types.Comment.Comment; // Assuming Comment.java is corrected
-import com.group7.lib.utilities.Conversion.DocumentConverter; // Assuming DocumentConverter will be updated
+import com.group7.lib.utilities.Conversion.DocumentConverter;
 import com.group7.lib.utilities.Database.Database;
-import com.group7.lib.utilities.Database.DatabaseCollection; // Assuming COMMENT will be added to DatabaseCollection
+import com.group7.lib.utilities.Database.DatabaseCollection;
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
 
@@ -47,13 +47,13 @@ public class CommentManager extends Manager<Comment> {
         // Assuming DocumentConverter.commentToDocument(comment) exists
         Document doc = DocumentConverter.commentToDocument(comment);
         if (doc == null) {
-             logger.log("Failed to convert comment to document for creation.", LogLevel.ERROR);
-             return null;
-         }
+            logger.log("Failed to convert comment to document for creation.", LogLevel.ERROR);
+            return null;
+        }
         String newId = database.insert(COLLECTION, doc);
         if (newId != null) {
-             logger.log("Created comment with ID: " + newId, LogLevel.INFO);
-             return new CommentId(newId);
+            logger.log("Created comment with ID: " + newId, LogLevel.INFO);
+            return new CommentId(newId);
         } else {
             logger.log("Failed to create comment", LogLevel.ERROR);
             return null;
@@ -66,12 +66,11 @@ public class CommentManager extends Manager<Comment> {
             logger.log("Attempted to update a comment with null object or null ID", LogLevel.WARNING);
             return;
         }
-        // Assuming DocumentConverter.commentToDocument(comment) exists
         Document doc = DocumentConverter.commentToDocument(comment);
-         if (doc == null) {
-             logger.log("Failed to convert comment to document for update.", LogLevel.ERROR);
-             return;
-         }
+        if (doc == null) {
+            logger.log("Failed to convert comment to document for update.", LogLevel.ERROR);
+            return;
+        }
         doc.remove("_id");
 
         boolean success = database.update(COLLECTION, comment.id().toString(), doc);
@@ -139,15 +138,15 @@ public class CommentManager extends Manager<Comment> {
                     try {
                         return new ObjectId(id.toString());
                     } catch (IllegalArgumentException e) {
-                         logger.log("Invalid ObjectId format in list: " + id.toString(), LogLevel.WARNING);
-                         return null;
+                        logger.log("Invalid ObjectId format in list: " + id.toString(), LogLevel.WARNING);
+                        return null;
                     }
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
 
         if (objectIds.isEmpty()) {
-             logger.log("No valid CommentIds provided in list query.", LogLevel.DEBUG);
+            logger.log("No valid CommentIds provided in list query.", LogLevel.DEBUG);
             return new ArrayList<>();
         }
 
@@ -206,4 +205,4 @@ public class CommentManager extends Manager<Comment> {
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
-} 
+}

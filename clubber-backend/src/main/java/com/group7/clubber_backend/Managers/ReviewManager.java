@@ -12,7 +12,6 @@ import com.group7.clubber_backend.Managers.base.Manager;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.base.Id;
 import com.group7.lib.types.Review.Review; // Assuming Review.java is created
-import com.group7.lib.types.Review.ReviewStatus; // Added import for ReviewStatus
 import com.group7.lib.utilities.Conversion.DocumentConverter; // Assuming DocumentConverter will be updated
 import com.group7.lib.utilities.Database.Database;
 import com.group7.lib.utilities.Database.DatabaseCollection; // Assuming REVIEW will be added to DatabaseCollection
@@ -48,13 +47,13 @@ public class ReviewManager extends Manager<Review> {
         // Assuming DocumentConverter.reviewToDocument(review) exists
         Document doc = DocumentConverter.reviewToDocument(review);
         if (doc == null) {
-             logger.log("Failed to convert review to document for creation.", LogLevel.ERROR);
-             return null;
-         }
+            logger.log("Failed to convert review to document for creation.", LogLevel.ERROR);
+            return null;
+        }
         String newId = database.insert(COLLECTION, doc);
         if (newId != null) {
-             logger.log("Created review with ID: " + newId, LogLevel.INFO);
-             return new ReviewId(newId);
+            logger.log("Created review with ID: " + newId, LogLevel.INFO);
+            return new ReviewId(newId);
         } else {
             logger.log("Failed to create review", LogLevel.ERROR); // Potentially add more review details
             return null;
@@ -69,10 +68,10 @@ public class ReviewManager extends Manager<Review> {
         }
         // Assuming DocumentConverter.reviewToDocument(review) exists
         Document doc = DocumentConverter.reviewToDocument(review);
-         if (doc == null) {
-             logger.log("Failed to convert review to document for update.", LogLevel.ERROR);
-             return;
-         }
+        if (doc == null) {
+            logger.log("Failed to convert review to document for update.", LogLevel.ERROR);
+            return;
+        }
         doc.remove("_id");
 
         boolean success = database.update(COLLECTION, review.id().toString(), doc);
@@ -140,15 +139,15 @@ public class ReviewManager extends Manager<Review> {
                     try {
                         return new ObjectId(id.toString());
                     } catch (IllegalArgumentException e) {
-                         logger.log("Invalid ObjectId format in list: " + id.toString(), LogLevel.WARNING);
-                         return null;
+                        logger.log("Invalid ObjectId format in list: " + id.toString(), LogLevel.WARNING);
+                        return null;
                     }
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
 
         if (objectIds.isEmpty()) {
-             logger.log("No valid ReviewIds provided in list query.", LogLevel.DEBUG);
+            logger.log("No valid ReviewIds provided in list query.", LogLevel.DEBUG);
             return new ArrayList<>();
         }
 
@@ -186,29 +185,7 @@ public class ReviewManager extends Manager<Review> {
 
         logger.log("Searching for reviews with " + field + " = " + value, LogLevel.INFO);
 
-        // Consider type conversion if searching non-string fields
         Object searchValue = value;
-        /*
-        // Commenting out old rating search logic as 'rating' is now a complex object
-        if (field.equals("rating")) { 
-            try {
-                searchValue = Integer.valueOf(value);
-            } catch (NumberFormatException e) {
-                logger.log("Invalid rating value for search: " + value, LogLevel.WARNING);
-                return new ArrayList<>();
-            }
-        }
-        */
-        // Add more field-specific conversions if needed (e.g., userId, organizationId, status)
-        // For searching by status, you might want to convert the string value to the ReviewStatus enum
-        if (field.equals("status")) {
-            try {
-                searchValue = ReviewStatus.valueOf(value.toUpperCase()).name(); // Search by enum name string
-            } catch (IllegalArgumentException e) {
-                logger.log("Invalid status value for search: " + value, LogLevel.WARNING);
-                return new ArrayList<>();
-            }
-        }
 
         Document searchQuery = new Document(field, searchValue);
         List<Document> docs = database.list(COLLECTION, searchQuery);
@@ -224,4 +201,4 @@ public class ReviewManager extends Manager<Review> {
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
-} 
+}

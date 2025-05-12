@@ -26,16 +26,11 @@ import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
-import com.group7.lib.types.Review.Rating;
 import com.group7.lib.types.Review.Review;
-import com.group7.lib.types.Review.ReviewStatus;
 import com.group7.lib.types.Schemas.Reviews.CreateReviewRequest;
-import com.group7.lib.types.Schemas.Reviews.DeleteResponse;
-import com.group7.lib.types.Schemas.Reviews.GetAllResponse;
-import com.group7.lib.types.Schemas.Reviews.GetByOrganizationResponse;
 import com.group7.lib.types.Schemas.Reviews.GetResponse;
+import com.group7.lib.types.Schemas.Reviews.ListResponse;
 import com.group7.lib.types.Schemas.Reviews.PostResponse;
-import com.group7.lib.types.Schemas.Reviews.PutResponse;
 import com.group7.lib.types.Schemas.Reviews.UpdateReviewRequest;
 import com.group7.lib.types.User.User;
 
@@ -78,7 +73,7 @@ public class ReviewController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
         }
 
-        Rating rating = new Rating(
+        Review.Rating rating = new Review.Rating(
                 request.rating().overall(),
                 request.rating().community(),
                 request.rating().activities(),
@@ -89,13 +84,6 @@ public class ReviewController {
         List<FileId> fileIds = request.fileIds() != null
                 ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
                 : Collections.emptyList();
-
-        ReviewStatus status;
-        try {
-            status = request.status() != null ? ReviewStatus.valueOf(request.status().toUpperCase()) : ReviewStatus.DRAFT;
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid review status value");
-        }
 
         Review newReview = new Review(
                 null,
@@ -109,9 +97,7 @@ public class ReviewController {
                 LocalDateTime.now(),
                 Collections.emptyList(),
                 Collections.emptyList(),
-                0,
-                Collections.emptyList(),
-                status
+                Collections.emptyList()
         );
 
         ReviewId reviewId = (ReviewId) reviewManager.create(newReview);
@@ -137,7 +123,7 @@ public class ReviewController {
                 authorUser.bio()
         );
         userManager.update(updatedUser);
-        return new PostResponse(reviewId, "Review created successfully");
+        return new PostResponse(reviewId);
     }
 
     @GetMapping("/{reviewId}")
@@ -150,25 +136,25 @@ public class ReviewController {
     }
 
     @GetMapping
-    public GetAllResponse getAllReviews() {
+    public ListResponse getAllReviews() {
         List<Review> reviews = reviewManager.getAll();
-        return new GetAllResponse(reviews);
+        return ListResponse.fromReviews(reviews);
     }
 
     @GetMapping("/users/{userId}")
-    public GetAllResponse getReviewsByUser(@PathVariable String userId) {
+    public ListResponse getReviewsByUser(@PathVariable String userId) {
         List<Review> reviews = reviewManager.search("authorId:" + userId);
-        return new GetAllResponse(reviews);
+        return ListResponse.fromReviews(reviews);
     }
 
     @GetMapping("/organizations/{organizationId}")
-    public GetByOrganizationResponse getReviewsByOrganization(@PathVariable String organizationId) {
+    public ListResponse getReviewsByOrganization(@PathVariable String organizationId) {
         List<Review> reviews = reviewManager.search("organizationId:" + organizationId);
-        return new GetByOrganizationResponse(reviews.isEmpty() ? new ArrayList<>() : reviews);
+        return ListResponse.fromReviews(reviews);
     }
 
     @PutMapping("/{reviewIdStr}")
-    public PutResponse updateReview(
+    public void updateReview(
             @RequestHeader("Authorization") String token,
             @PathVariable String reviewIdStr,
             @RequestBody UpdateReviewRequest request) {
@@ -194,13 +180,13 @@ public class ReviewController {
         String title = request.title() != null ? request.title() : existingReview.title();
         String content = request.content() != null ? request.content() : existingReview.content();
 
-        Rating newRating = existingReview.rating();
+        Review.Rating newRating = existingReview.rating();
         if (request.rating() != null) {
             UpdateReviewRequest.RatingDto ratingDto = request.rating();
             if (ratingDto.overall() != null && (ratingDto.overall() < 1 || ratingDto.overall() > 5)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overall rating must be between 1 and 5");
             }
-            newRating = new Rating(
+            newRating = new Review.Rating(
                     ratingDto.overall() != null ? ratingDto.overall() : existingReview.rating().overall(),
                     ratingDto.community() != null ? ratingDto.community() : existingReview.rating().community(),
                     ratingDto.activities() != null ? ratingDto.activities() : existingReview.rating().activities(),
@@ -212,15 +198,6 @@ public class ReviewController {
         List<FileId> fileIds = request.fileIds() != null
                 ? request.fileIds().stream().map(FileId::new).collect(Collectors.toList())
                 : existingReview.fileIds();
-
-        ReviewStatus status = existingReview.status();
-        if (request.status() != null) {
-            try {
-                status = ReviewStatus.valueOf(request.status().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid review status value");
-            }
-        }
 
         Review updatedReview = new Review(
                 existingReview.id(),
@@ -234,17 +211,14 @@ public class ReviewController {
                 LocalDateTime.now(),
                 existingReview.upvotes(),
                 existingReview.downvotes(),
-                existingReview.views(),
-                existingReview.commentIds(),
-                status
+                existingReview.commentIds()
         );
 
         reviewManager.update(updatedReview);
-        return new PutResponse(updatedReview, "Review updated successfully");
     }
 
     @DeleteMapping("/{reviewIdStr}")
-    public DeleteResponse deleteReview(
+    public void deleteReview(
             @RequestHeader("Authorization") String token,
             @PathVariable String reviewIdStr) {
         if (token == null || token.isBlank()) {
@@ -267,6 +241,5 @@ public class ReviewController {
         }
 
         reviewManager.delete(reviewObjectId);
-        return new DeleteResponse("Review deleted successfully");
     }
 }

@@ -29,9 +29,7 @@ import com.group7.lib.types.Organization.Organization;
 import com.group7.lib.types.Organization.OrganizationLinks;
 import com.group7.lib.types.Organization.OrganizationType;
 import com.group7.lib.types.Organization.RecruitingStatus;
-import com.group7.lib.types.Review.Rating;
 import com.group7.lib.types.Review.Review;
-import com.group7.lib.types.Review.ReviewStatus;
 import com.group7.lib.types.User.User;
 import com.group7.lib.types.User.Year;
 import com.group7.lib.utilities.Logger.LogLevel;
@@ -367,7 +365,7 @@ public class DocumentConverter {
     }
 
     // --- Rating Conversion ---
-    public static Document ratingToDocument(Rating rating) {
+    public static Document ratingToDocument(Review.Rating rating) {
         if (rating == null) {
             return null;
         }
@@ -380,11 +378,11 @@ public class DocumentConverter {
         return doc;
     }
 
-    public static Rating documentToRating(Document doc) {
+    public static Review.Rating documentToRating(Document doc) {
         if (doc == null) {
             return null;
         }
-        return new Rating(
+        return new Review.Rating(
                 doc.getInteger("overall", 0), // Default to 0 if missing
                 doc.getInteger("community", 0),
                 doc.getInteger("activities", 0),
@@ -414,9 +412,7 @@ public class DocumentConverter {
         doc.put("updatedAt", review.updatedAt() != null ? Date.from(review.updatedAt().toInstant(ZoneOffset.UTC)) : null);
         doc.put("upvotes", idListToStringList(review.upvotes()));
         doc.put("downvotes", idListToStringList(review.downvotes()));
-        doc.put("views", review.views());
         doc.put("commentIds", idListToStringList(review.commentIds()));
-        doc.put("status", review.status() != null ? review.status().name() : null); // Store enum name as string
 
         return doc;
     }
@@ -450,7 +446,7 @@ public class DocumentConverter {
         String content = doc.getString("content");
 
         Document ratingDoc = doc.get("rating", Document.class);
-        Rating rating = documentToRating(ratingDoc); // Use new documentToRating
+        Review.Rating rating = documentToRating(ratingDoc); // Use new documentToRating
 
         List<FileId> fileIds = stringListToIdList(doc.getList("fileIds", String.class, new ArrayList<>()), FileId.class);
 
@@ -463,12 +459,7 @@ public class DocumentConverter {
         List<UserId> upvotes = stringListToIdList(doc.getList("upvotes", String.class, new ArrayList<>()), UserId.class);
         List<UserId> downvotes = stringListToIdList(doc.getList("downvotes", String.class, new ArrayList<>()), UserId.class);
 
-        Integer views = doc.getInteger("views", 0); // Default to 0 if missing
-
         List<CommentId> commentIds = stringListToIdList(doc.getList("commentIds", String.class, new ArrayList<>()), CommentId.class);
-
-        String statusStr = doc.getString("status");
-        ReviewStatus status = statusStr != null ? ReviewStatus.valueOf(statusStr.toUpperCase()) : null; // Ensure toUpperCase for enum matching if stored differently
 
         return new Review(
                 reviewId,
@@ -482,9 +473,7 @@ public class DocumentConverter {
                 updatedAt,
                 upvotes,
                 downvotes,
-                views,
-                commentIds,
-                status);
+                commentIds);
     }
 
     // --- Comment Conversion ---

@@ -10,18 +10,27 @@ import com.group7.lib.types.Ids.ReviewId;
 import com.group7.lib.types.Ids.UserId;
 
 public record Review(
-    ReviewId id,
-    UserId authorId,
-    OrganizationId organizationId,
-    String title,
-    String content,
-    Rating rating,
-    List<FileId> fileIds,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt,
-    List<UserId> upvotes,
-    List<UserId> downvotes,
-    int views,
-    List<CommentId> commentIds,
-    ReviewStatus status
-) {}
+        ReviewId id,
+        UserId authorId,
+        OrganizationId organizationId,
+        String title,
+        String content,
+        Rating rating,
+        List<FileId> fileIds,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
+        List<UserId> upvotes,
+        List<UserId> downvotes,
+        List<CommentId> commentIds
+        ) {
+
+    public record Rating(
+            int overall,
+            int community,
+            int activities,
+            int leadership,
+            int inclusivity
+            ) {
+
+    }
+}

@@ -23,7 +23,8 @@ public record GetResponse(
                 announcement.title(),
                 announcement.content(),
                 announcement.attachmentIds() != null
-                ? announcement.attachmentIds().stream().map(id -> id.toString()).toArray(String[]::new) : null,
+                ? announcement.attachmentIds().stream()
+                        .map(id -> id.toString()).toArray(String[]::new) : null,
                 announcement.createdAt().toString(),
                 announcement.updatedAt().toString(),
                 announcement.importance()

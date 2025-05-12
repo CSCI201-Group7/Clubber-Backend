@@ -30,8 +30,8 @@ import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.OrganizationId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Organization.Organization;
-import com.group7.lib.types.Schemas.Announcements.GetByOrgResponse;
 import com.group7.lib.types.Schemas.Announcements.GetResponse;
+import com.group7.lib.types.Schemas.Announcements.ListResponse;
 import com.group7.lib.types.Schemas.Announcements.PostResponse;
 import com.group7.lib.types.User.User;
 
@@ -152,18 +152,17 @@ public class AnnouncementController {
     }
 
     @GetMapping("/organizations/{organizationId}")
-    public GetByOrgResponse getAnnouncementsByOrganizationId(@PathVariable String organizationId) {
+    public ListResponse getAnnouncementsByOrganizationId(@PathVariable String organizationId) {
         OrganizationId orgId = new OrganizationId(organizationId);
-        // Check if organization exists (optional, but good practice)
         Organization organization = organizationManager.get(orgId);
         if (organization == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found");
         }
         List<AnnouncementId> announcementIds = new ArrayList<>(organization.announcementIds() != null ? organization.announcementIds() : new ArrayList<>());
         if (announcementIds.isEmpty()) {
-            return new GetByOrgResponse(new ArrayList<>());
+            return new ListResponse(new ArrayList<>());
         }
         List<Announcement> announcements = announcementManager.list(announcementIds.toArray(AnnouncementId[]::new));
-        return GetByOrgResponse.fromAnnouncements(announcements);
+        return ListResponse.fromAnnouncements(announcements);
     }
 }

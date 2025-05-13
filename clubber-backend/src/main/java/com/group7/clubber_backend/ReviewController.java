@@ -58,7 +58,7 @@ public class ReviewController {
             @RequestParam("leadershipRating") int leadershipRating,
             @RequestParam("inclusivityRating") int inclusivityRating,
             @RequestParam("overallRating") int overallRating,
-            @RequestParam("attachments") List<MultipartFile> attachments) {
+            @RequestParam(value = "attachments", required = false) List<MultipartFile> attachments) {
         if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -84,15 +84,17 @@ public class ReviewController {
         }
 
         List<FileId> fileIds = new ArrayList<>();
-        for (MultipartFile attachment : attachments) {
-            try {
-                FileId fileId = (FileId) fileManager.upload(
-                        attachment.getOriginalFilename(),
-                        attachment.getInputStream(),
-                        attachment.getContentType());
-                fileIds.add(fileId);
-            } catch (IOException e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload attachment");
+        if (attachments != null) {
+            for (MultipartFile attachment : attachments) {
+                try {
+                    FileId fileId = (FileId) fileManager.upload(
+                            attachment.getOriginalFilename(),
+                            attachment.getInputStream(),
+                            attachment.getContentType());
+                    fileIds.add(fileId);
+                } catch (IOException e) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload attachment");
+                }
             }
         }
 
@@ -213,8 +215,15 @@ public class ReviewController {
         ArrayList<UserId> newDownvotes = new ArrayList<>(existingReview.downvotes());
 
         if (request.revoke()) {
-            newUpvotes.remove(currentUserId);
+            if (newUpvotes.contains(currentUserId)) {
+                newUpvotes.remove(currentUserId);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already downvoted this review");
+            }
         } else {
+            if (newDownvotes.contains(currentUserId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already upvoted this review");
+            }
             newUpvotes.add(currentUserId);
         }
 
@@ -240,7 +249,8 @@ public class ReviewController {
     public void downvoteReview(
             @RequestHeader("Authorization") String token,
             @PathVariable String reviewIdStr,
-            @RequestBody VoteRequest request) {
+            @RequestBody VoteRequest request
+    ) {
         if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }
@@ -269,8 +279,15 @@ public class ReviewController {
         ArrayList<UserId> newDownvotes = new ArrayList<>(existingReview.downvotes());
 
         if (request.revoke()) {
-            newDownvotes.remove(currentUserId);
+            if (newDownvotes.contains(currentUserId)) {
+                newDownvotes.remove(currentUserId);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already upvoted this review");
+            }
         } else {
+            if (newUpvotes.contains(currentUserId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already upvoted this review");
+            }
             newDownvotes.add(currentUserId);
         }
 
@@ -296,7 +313,8 @@ public class ReviewController {
     @DeleteMapping("/{reviewIdStr}")
     public void deleteReview(
             @RequestHeader("Authorization") String token,
-            @PathVariable String reviewIdStr) {
+            @PathVariable String reviewIdStr
+    ) {
         if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Token missing");
         }

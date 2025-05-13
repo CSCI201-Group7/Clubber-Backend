@@ -30,7 +30,6 @@ import com.group7.lib.types.Organization.OrganizationType;
 import com.group7.lib.types.Organization.RecruitingStatus;
 import com.group7.lib.types.Review.Review;
 import com.group7.lib.types.User.User;
-import com.group7.lib.types.User.Year;
 import com.group7.lib.utilities.Logger.LogLevel;
 import com.group7.lib.utilities.Logger.Logger;
 
@@ -117,10 +116,12 @@ public class DocumentConverter {
         doc.put("password", user.password());
         doc.put("name", user.name());
         doc.put("email", user.email());
-        doc.put("year", user.year() != null ? user.year().name() : null); // Store enum as string
+        doc.put("year", user.year());
         doc.put("reviewIds", idArrayToStringList(user.reviewIds()));
         doc.put("commentIds", idArrayToStringList(user.commentIds()));
         doc.put("contactIds", idArrayToStringList(user.contactIds()));
+        doc.put("profileImageId", user.profileImageId() != null ? user.profileImageId().toString() : null);
+        doc.put("bio", user.bio());
 
         return doc;
     }
@@ -143,12 +144,16 @@ public class DocumentConverter {
         String email = doc.getString("email");
         String yearStr = doc.getString("year");
         String password = doc.getString("password");
-        Year year = (yearStr != null) ? Year.valueOf(yearStr) : null; // Convert string back to enum, handle null
+        String year = (yearStr != null) ? yearStr : null; // Convert string back to enum, handle null
 
         // Convert lists of strings back to Id arrays
         ReviewId[] reviewIds = stringListToIdArray(doc.getList("reviewIds", String.class, new ArrayList<>()), ReviewId.class);
         CommentId[] commentIds = stringListToIdArray(doc.getList("commentIds", String.class, new ArrayList<>()), CommentId.class);
         UserId[] contactIds = stringListToIdArray(doc.getList("contactIds", String.class, new ArrayList<>()), UserId.class);
+
+        String profileImageIdStr = doc.getString("profileImageId");
+        FileId profileImageId = profileImageIdStr != null ? new FileId(profileImageIdStr) : null;
+        String bio = doc.getString("bio");
 
         // Use the User record's canonical constructor
         try {
@@ -162,8 +167,8 @@ public class DocumentConverter {
                     reviewIds,
                     commentIds,
                     contactIds,
-                    null, // profileImageId
-                    null // bio
+                    profileImageId,
+                    bio
             );
             return user;
         } catch (NullPointerException e) {

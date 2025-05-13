@@ -1,18 +1,25 @@
 package com.group7.clubber_backend;
 
+import java.io.IOException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.group7.clubber_backend.Managers.FileManager;
 import com.group7.clubber_backend.Managers.UserManager;
 import com.group7.clubber_backend.Processors.CredentialProcessor;
+import com.group7.lib.types.Ids.FileId;
 import com.group7.lib.types.Ids.UserId;
 import com.group7.lib.types.Schemas.Users.DeleteRequest;
 import com.group7.lib.types.Schemas.Users.GetResponse;
@@ -122,8 +129,53 @@ public class UserController {
         return new GetResponse(user);
     }
 
+    @PutMapping
+    public void update(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "bio", required = false) String bio,
+            @RequestParam(value = "year", required = false) String year,
+            @RequestParam(value = "profileImage", required = false) MultipartFile profileImage
+    ) {
+        UserId userId = CredentialProcessor.getInstance().verifyToken(token);
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
+        User user = UserManager.getInstance().get(userId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        FileId profileImageId = user.profileImageId();
+        if (profileImage != null) {
+            try {
+                profileImageId = FileManager.getInstance().upload(
+                        profileImage.getOriginalFilename(),
+                        profileImage.getInputStream(),
+                        profileImage.getContentType());
+            } catch (IOException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload profile picture");
+            }
+        }
+
+        UserManager.getInstance().update(new User(
+                user.id(),
+                user.username(),
+                name != null ? name : user.name(),
+                user.email(),
+                user.password(),
+                year != null ? year : user.year(),
+                user.reviewIds(),
+                user.commentIds(),
+                user.contactIds(),
+                profileImageId,
+                bio != null ? bio : user.bio()
+        ));
+    }
+
     @DeleteMapping
-    public void delete(@RequestBody DeleteRequest request) {
+    public void delete(@RequestBody DeleteRequest request
+    ) {
         String token = request.token();
         UserId userId = CredentialProcessor.getInstance().verifyToken(token);
         if (userId == null) {

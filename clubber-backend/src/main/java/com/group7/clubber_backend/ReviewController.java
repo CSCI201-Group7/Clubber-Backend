@@ -171,15 +171,12 @@ public class ReviewController {
         if (userId != null && organizationId != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId and organizationId cannot both be provided");
         }
-        System.out.println("userId: " + userId);
-        System.out.println("organizationId: " + organizationId);
         List<Review> reviews;
         if (userId != null) {
             reviews = reviewManager.search("authorId:" + userId);
         } else {
             reviews = reviewManager.search("organizationId:" + organizationId);
         }
-        System.out.println("reviews: " + reviews);
         return ListResponse.fromList(reviews.stream().map(GetResponse::new).collect(Collectors.toList()));
     }
 

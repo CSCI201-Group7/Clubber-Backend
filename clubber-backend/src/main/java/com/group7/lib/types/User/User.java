@@ -15,7 +15,7 @@ public record User(
         String name,
         String email,
         String password,
-        Year year,
+        String year,
         ReviewId[] reviewIds,
         CommentId[] commentIds,
         UserId[] contactIds,
